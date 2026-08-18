@@ -290,6 +290,173 @@ label {
   border-radius: 2px;
 }
 
+/* Anéis de recurso (PV/PD/PM) */
+.resource {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  padding: 14px 10px 16px;
+}
+
+.resource-ring-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.resource-ring-row button {
+  padding: 6px 12px;
+}
+
+.ring-wrap {
+  position: relative;
+  width: 96px;
+  height: 96px;
+}
+
+.ring-svg {
+  width: 100%;
+  height: 100%;
+}
+
+.ring-bg {
+  fill: none;
+  stroke: var(--line);
+  stroke-width: 8;
+}
+
+.ring-fill {
+  fill: none;
+  stroke: var(--gold);
+  stroke-width: 8;
+  stroke-linecap: round;
+  transition: stroke-dashoffset 0.25s ease;
+}
+
+.ring-center {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.ring-current {
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--gold-bright);
+  line-height: 1;
+}
+
+.ring-max {
+  font-family: var(--font-sc);
+  font-size: 0.72rem;
+  color: var(--ash);
+  cursor: pointer;
+  border-bottom: 1px dotted var(--ash);
+}
+
+.ring-max-input {
+  width: 50px;
+  text-align: center;
+  padding: 2px 4px;
+  font-size: 0.75rem;
+}
+
+.resource-adjust {
+  display: flex;
+  gap: 6px;
+  width: 100%;
+}
+.resource-adjust input {
+  text-align: center;
+}
+.resource-adjust button {
+  padding: 8px 10px;
+  white-space: nowrap;
+}
+
+.temp-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  margin-top: 4px;
+}
+.temp-row button {
+  padding: 4px 9px;
+}
+.temp-track {
+  position: relative;
+  flex: 1;
+  height: 16px;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: 20px;
+  overflow: hidden;
+}
+.temp-fill {
+  position: absolute;
+  inset: 0;
+  width: 0%;
+  background: linear-gradient(90deg, var(--blood), #b5504c);
+}
+.temp-value {
+  position: relative;
+  z-index: 1;
+  display: block;
+  text-align: center;
+  font-size: 0.68rem;
+  line-height: 16px;
+  color: var(--bone);
+  font-family: var(--font-sc);
+}
+
+/* Equipamento */
+.equipment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.equipment-item {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--bg-elevated);
+  border: 1px solid var(--line);
+  padding: 12px;
+  border-radius: 2px;
+}
+.equipment-reorder {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+.equipment-reorder button {
+  padding: 2px 8px;
+  font-size: 0.75rem;
+}
+.equipment-fields {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Progressão / pendências */
+.pending-block {
+  background: var(--bg-elevated);
+  border: 1px solid var(--gold);
+  border-radius: 2px;
+  padding: 14px 16px;
+  margin-top: 14px;
+}
+
 .dice-result {
   text-align: center;
   padding: 20px;

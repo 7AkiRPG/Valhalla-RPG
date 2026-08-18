@@ -39,3 +39,22 @@ export function spellSlotsForLevel(nivel) {
 export function ascensionsForLevel(nivel) {
   return Math.floor((nivel || 1) / 5)
 }
+
+// O que acontece ao alcançar um determinado nível (chamado a cada level up):
+// - a cada 4 níveis: ganha 1 ponto pra gastar em habilidade de caminho OU talento
+// - a cada 5 níveis: ascensão — desbloqueia automaticamente o próximo patamar
+//   de um caminho já possuído, e escolhe 1 bônus (resistência / margem / multiplicador)
+export function levelUpEffects(newLevel) {
+  return {
+    grantsChoicePoint: newLevel % 4 === 0,
+    isAscension: newLevel % 5 === 0,
+  }
+}
+
+export function buildInitialResources(derived) {
+  return {
+    pv: { max: derived.pv, current: derived.pv, temp: 0 },
+    pd: { max: derived.pd, current: derived.pd, temp: 0 },
+    pm: { max: derived.pm, current: derived.pm, temp: 0 },
+  }
+}

@@ -4,11 +4,11 @@ import { supabase } from '../lib/supabaseClient.js'
 import { usePlayer } from '../lib/PlayerContext.jsx'
 import { LINEAGES } from '../data/lineages.js'
 import { PATHS } from '../data/paths.js'
-import { WEAPONS, ARMORS, CONJURATION_STYLES } from '../data/equipment.js'
+import { CONJURATION_STYLES } from '../data/equipment.js'
 import { CANTRIPS, SPELLS } from '../data/spells.js'
-import { computeDerivedStats } from '../lib/statCalc.js'
+import { computeDerivedStats, buildInitialResources } from '../lib/statCalc.js'
 
-const STEPS = ['Nome & Atributos', 'Conjuração', 'Linhagem', 'Caminho', 'Talento', 'Equipamento', 'Magias', 'Revisão']
+const STEPS = ['Nome & Atributos', 'Conjuração', 'Linhagem', 'Caminho', 'Talento', 'Magias', 'Revisão']
 const ATTR_POINTS_START = 3
 const ATTR_MAX_START = 2
 
@@ -24,10 +24,9 @@ export default function CharacterCreate() {
   const [conjStyle, setConjStyle] = useState(null)
   const [lineageId, setLineageId] = useState(null)
   const [pathId, setPathId] = useState(null)
+  const [chosenAbilityName, setChosenAbilityName] = useState(null)
   const [talentName, setTalentName] = useState('')
   const [talentDesc, setTalentDesc] = useState('')
-  const [weaponName, setWeaponName] = useState(null)
-  const [armorName, setArmorName] = useState(null)
   const [cantripName, setCantripName] = useState(null)
   const [spellName, setSpellName] = useState(null)
 
@@ -38,6 +37,8 @@ export default function CharacterCreate() {
     () => computeDerivedStats({ nivel: 1, corpo: attrs.corpo, mente: attrs.mente, alma: attrs.alma, lineageId }),
     [attrs, lineageId]
   )
+
+  const selectedPath = PATHS.find((p) => p.id === pathId)
 
   function bumpAttr(key, delta) {
     setAttrs((prev) => {
@@ -58,7 +59,7 @@ export default function CharacterCreate() {
       case 2:
         return !!lineageId
       case 3:
-        return !!pathId
+        return !!pathId && !!chosenAbilityName
       case 4:
         return talentName.trim().length > 0
       default:
@@ -71,7 +72,6 @@ export default function CharacterCreate() {
     setError(null)
     try {
       const lineage = LINEAGES.find((l) => l.id === lineageId)
-      const path = PATHS.find((p) => p.id === pathId)
 
       const sheet = {
         nivel: 1,
@@ -79,11 +79,19 @@ export default function CharacterCreate() {
         conjuracaoEstilo: conjStyle,
         lineageId,
         lineageName: lineage?.name,
-        pathId,
-        pathName: path?.name,
-        talento: { nome: talentName, descricao: talentDesc },
-        equipamento: { arma: weaponName, armadura: armorName },
+        paths: {
+          [pathId]: {
+            unlockedPatamar: 1,
+            abilities: [{ patamar: 1, name: chosenAbilityName }],
+          },
+        },
+        talentos: [{ nome: talentName, descricao: talentDesc }],
+        pendingChoicePoints: 0,
+        pendingAscensions: 0,
+        ascensoes: [],
+        equipamento: [],
         magias: { truque: cantripName, magia: spellName },
+        resources: buildInitialResources(derived),
         derived,
         pontosAcao: 3,
       }
@@ -186,23 +194,40 @@ export default function CharacterCreate() {
 
       {step === 3 && (
         <div className="card">
-          <p className="muted">Escolha o caminho inicial (1º patamar) do seu campeão.</p>
+          <p className="muted">Escolha o caminho inicial do seu campeão.</p>
           <div className="choice-list">
             {PATHS.map((p) => (
               <div
                 key={p.id}
                 className={`choice-card ${pathId === p.id ? 'selected' : ''}`}
-                onClick={() => setPathId(p.id)}
+                onClick={() => {
+                  setPathId(p.id)
+                  setChosenAbilityName(null)
+                }}
               >
                 <h4>{p.name}</h4>
-                {p.patamares[1].map((a) => (
-                  <p key={a.name}>
-                    <strong>{a.name}</strong> — {a.desc}
-                  </p>
-                ))}
               </div>
             ))}
           </div>
+
+          {selectedPath && (
+            <>
+              <div className="rune-divider">ᛟ</div>
+              <p className="muted">Agora escolha 1 habilidade do 1º patamar de {selectedPath.name}.</p>
+              <div className="choice-list">
+                {selectedPath.patamares[1].map((a) => (
+                  <div
+                    key={a.name}
+                    className={`choice-card ${chosenAbilityName === a.name ? 'selected' : ''}`}
+                    onClick={() => setChosenAbilityName(a.name)}
+                  >
+                    <h4>{a.name}</h4>
+                    <p>{a.desc}</p>
+                  </div>
+                ))}
+              </div>
+            </>
+          )}
         </div>
       )}
 
@@ -224,34 +249,6 @@ export default function CharacterCreate() {
       )}
 
       {step === 5 && (
-        <div className="card">
-          <p className="muted">Escolha uma arma e uma proteção inicial (opcional, dá pra ajustar depois).</p>
-          <div className="field">
-            <label>Arma</label>
-            <select value={weaponName || ''} onChange={(e) => setWeaponName(e.target.value || null)}>
-              <option value="">Nenhuma</option>
-              {WEAPONS.map((w) => (
-                <option key={w.name} value={w.name}>
-                  {w.name} — {w.dano}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Proteção</label>
-            <select value={armorName || ''} onChange={(e) => setArmorName(e.target.value || null)}>
-              <option value="">Nenhuma</option>
-              {ARMORS.map((a) => (
-                <option key={a.name} value={a.name}>
-                  {a.name} — {a.bonus}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {step === 6 && (
         <div className="card">
           <p className="muted">No nível 1 você tem 1 espaço de truque e 1 espaço de magia.</p>
           <div className="field">
@@ -279,11 +276,11 @@ export default function CharacterCreate() {
         </div>
       )}
 
-      {step === 7 && (
+      {step === 6 && (
         <div className="card">
           <h3>{name || 'Campeão sem nome'}</h3>
           <p className="muted">
-            {LINEAGES.find((l) => l.id === lineageId)?.name} · Caminho de {PATHS.find((p) => p.id === pathId)?.name}
+            {LINEAGES.find((l) => l.id === lineageId)?.name} · Caminho de {selectedPath?.name} ({chosenAbilityName})
           </p>
           <div className="stat-row">
             <div className="stat-box">
