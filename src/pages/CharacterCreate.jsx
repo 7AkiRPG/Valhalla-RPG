@@ -5,10 +5,9 @@ import { usePlayer } from '../lib/PlayerContext.jsx'
 import { LINEAGES } from '../data/lineages.js'
 import { PATHS } from '../data/paths.js'
 import { CONJURATION_STYLES } from '../data/equipment.js'
-import { CANTRIPS, SPELLS } from '../data/spells.js'
 import { computeDerivedStats, buildInitialResources } from '../lib/statCalc.js'
 
-const STEPS = ['Nome & Atributos', 'Conjuração', 'Linhagem', 'Caminho', 'Talento', 'Magias', 'Revisão']
+const STEPS = ['Nome & Atributos', 'Conjuração', 'Linhagem', 'Caminho', 'Talento', 'Revisão']
 const ATTR_POINTS_START = 3
 const ATTR_MAX_START = 2
 
@@ -27,8 +26,6 @@ export default function CharacterCreate() {
   const [chosenAbilityName, setChosenAbilityName] = useState(null)
   const [talentName, setTalentName] = useState('')
   const [talentDesc, setTalentDesc] = useState('')
-  const [cantripName, setCantripName] = useState(null)
-  const [spellName, setSpellName] = useState(null)
 
   const attrPointsUsed = attrs.corpo + attrs.mente + attrs.alma
   const attrPointsLeft = ATTR_POINTS_START - attrPointsUsed
@@ -90,7 +87,7 @@ export default function CharacterCreate() {
         pendingAscensions: 0,
         ascensoes: [],
         equipamento: [],
-        magias: { truque: cantripName, magia: spellName },
+        magias: [],
         resources: buildInitialResources(derived),
         derived,
         pontosAcao: 3,
@@ -231,94 +228,4 @@ export default function CharacterCreate() {
         </div>
       )}
 
-      {step === 4 && (
-        <div className="card">
-          <p className="muted">
-            Crie um talento único para seu campeão. Ele pode ter limitações e fraquezas em troca de ser mais
-            poderoso.
-          </p>
-          <div className="field">
-            <label>Nome do talento</label>
-            <input value={talentName} onChange={(e) => setTalentName(e.target.value)} />
-          </div>
-          <div className="field">
-            <label>Descrição, efeito e limitações</label>
-            <textarea rows={5} value={talentDesc} onChange={(e) => setTalentDesc(e.target.value)} />
-          </div>
-        </div>
-      )}
-
-      {step === 5 && (
-        <div className="card">
-          <p className="muted">No nível 1 você tem 1 espaço de truque e 1 espaço de magia.</p>
-          <div className="field">
-            <label>Truque</label>
-            <select value={cantripName || ''} onChange={(e) => setCantripName(e.target.value || null)}>
-              <option value="">Nenhum</option>
-              {CANTRIPS.map((c) => (
-                <option key={c.name} value={c.name}>
-                  {c.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div className="field">
-            <label>Magia de 1º nível</label>
-            <select value={spellName || ''} onChange={(e) => setSpellName(e.target.value || null)}>
-              <option value="">Nenhuma</option>
-              {SPELLS.filter((s) => s.nivel === 1).map((s) => (
-                <option key={s.name} value={s.name}>
-                  {s.name}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {step === 6 && (
-        <div className="card">
-          <h3>{name || 'Campeão sem nome'}</h3>
-          <p className="muted">
-            {LINEAGES.find((l) => l.id === lineageId)?.name} · Caminho de {selectedPath?.name} ({chosenAbilityName})
-          </p>
-          <div className="stat-row">
-            <div className="stat-box">
-              <span className="value">{derived.pv}</span>
-              <span className="label">PV</span>
-            </div>
-            <div className="stat-box">
-              <span className="value">{derived.pd}</span>
-              <span className="label">PD</span>
-            </div>
-            <div className="stat-box">
-              <span className="value">{derived.pm}</span>
-              <span className="label">PM</span>
-            </div>
-            <div className="stat-box">
-              <span className="value">{derived.rd}</span>
-              <span className="label">RD</span>
-            </div>
-          </div>
-          {error && <p style={{ color: 'var(--blood)' }}>{error}</p>}
-          <div style={{ marginTop: 16 }}>
-            <button className="primary" onClick={handleSave} disabled={saving}>
-              {saving ? 'Forjando...' : 'Salvar campeão'}
-            </button>
-          </div>
-        </div>
-      )}
-
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 20 }}>
-        <button className="ghost" onClick={() => setStep((s) => Math.max(0, s - 1))} disabled={step === 0}>
-          Voltar
-        </button>
-        {step < STEPS.length - 1 && (
-          <button className="primary" onClick={() => setStep((s) => s + 1)} disabled={!canAdvance()}>
-            Avançar
-          </button>
-        )}
-      </div>
-    </div>
-  )
-}
+      {step === 4
