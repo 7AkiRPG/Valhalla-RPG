@@ -3,10 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import DiceRoller from '../components/DiceRoller.jsx'
 import ResourceRing from '../components/ResourceRing.jsx'
-import EquipmentList from '../components/EquipmentList.jsx'
 import LevelProgression from '../components/LevelProgression.jsx'
 import PathsOverview from '../components/PathsOverview.jsx'
 import DeleteCharacter from '../components/DeleteCharacter.jsx'
+import FreeItemList from '../components/FreeItemList.jsx'
+import { normalizeSheet } from '../lib/characterMigration.js'
 
 export default function CharacterSheet() {
   const { id } = useParams()
@@ -27,7 +28,7 @@ export default function CharacterSheet() {
       if (error) setError(error.message)
       else {
         setCharacter(data)
-        setSheet(data.sheet || {})
+        setSheet(normalizeSheet(data.sheet || {}))
       }
       setLoading(false)
     }
@@ -110,18 +111,32 @@ export default function CharacterSheet() {
           ))}
         </div>
 
-        <div className="card">
-          <h3>Magias</h3>
-          <p className="muted">Truque: {sheet.magias?.truque || '—'}</p>
-          <p className="muted">Magia: {sheet.magias?.magia || '—'}</p>
-        </div>
-
         <PathsOverview paths={sheet.paths} />
       </div>
 
       <LevelProgression sheet={sheet} onChange={updateSheet} />
 
-      <EquipmentList items={sheet.equipamento || []} onChange={(items) => updateSheet({ ...sheet, equipamento: items })} />
+      <FreeItemList
+        title="Equipamento"
+        hint="Adicione qualquer item — arma, armadura, artefato — com nome e descrição livres."
+        namePlaceholder="Nome do item"
+        descPlaceholder="Descrição (dano, RD, efeitos, o que você quiser)"
+        addLabel="+ Adicionar item"
+        emptyLabel="Nenhum item ainda."
+        items={sheet.equipamento || []}
+        onChange={(items) => updateSheet({ ...sheet, equipamento: items })}
+      />
+
+      <FreeItemList
+        title="Magias (truques e feitiços)"
+        hint="Adicione truques e magias com nome e descrição livres — custo, efeito, o que você quiser."
+        namePlaceholder="Nome da magia ou truque"
+        descPlaceholder="Descrição (custo, tempo de conjuração, efeito...)"
+        addLabel="+ Adicionar magia"
+        emptyLabel="Nenhuma magia ainda."
+        items={sheet.magias || []}
+        onChange={(items) => updateSheet({ ...sheet, magias: items })}
+      />
 
       <DiceRoller />
 
