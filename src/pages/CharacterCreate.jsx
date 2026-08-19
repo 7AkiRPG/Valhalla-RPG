@@ -79,7 +79,7 @@ export default function CharacterCreate() {
         paths: {
           [pathId]: {
             unlockedPatamar: 1,
-            abilities: [{ patamar: 1, name: chosenAbilityName }],
+            abilities: [chosenAbilityName],
           },
         },
         talentos: [{ nome: talentName, descricao: talentDesc }],
