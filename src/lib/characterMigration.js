@@ -30,6 +30,18 @@ export function normalizeSheet(rawSheet) {
       : {}
   }
 
+  // Corrige um bug anterior que salvava habilidades de caminho como objeto
+  // ({patamar, name}) em vez de apenas o nome (texto). Isso quebrava a ficha
+  // (React não consegue renderizar um objeto direto).
+  const fixedPaths = {}
+  for (const [pid, data] of Object.entries(sheet.paths)) {
+    const abilities = (data.abilities || [])
+      .map((a) => (typeof a === 'string' ? a : a?.name))
+      .filter(Boolean)
+    fixedPaths[pid] = { ...data, abilities }
+  }
+  sheet.paths = fixedPaths
+
   // Formato antigo: talento (singular, objeto) -> talentos (array)
   if (!Array.isArray(sheet.talentos)) {
     sheet.talentos = sheet.talento ? [sheet.talento] : []
