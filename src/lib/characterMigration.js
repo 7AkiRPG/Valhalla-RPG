@@ -69,5 +69,22 @@ export function normalizeSheet(rawSheet) {
     sheet.magias = items
   }
 
+  if (!Array.isArray(sheet.truques)) {
+    sheet.truques = []
+  }
+
+  if (!sheet.combatStats) {
+    sheet.combatStats = {
+      rd: { base: sheet.derived?.rd || 0, extra: 0 },
+      aparar: { base: 0, extra: 0 },
+      bloquear: { base: 0, extra: 0 },
+      esquivar: { base: 0, extra: 0 },
+    }
+  }
+
+  if (typeof sheet.anotacoes !== 'string') {
+    sheet.anotacoes = ''
+  }
+
   return sheet
 }

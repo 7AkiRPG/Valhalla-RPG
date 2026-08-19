@@ -58,3 +58,88 @@ export function buildInitialResources(derived) {
     pm: { max: derived.pm, current: derived.pm, temp: 0 },
   }
 }
+
+// Aplica uma mudança de nível (subir ou descer, de 1 em 1, podendo pular
+// vários de uma vez quando o número é editado manualmente). Ao subir,
+// cada limiar cruzado concede pontos pendentes normalmente. Ao descer,
+// os PV/PD/PM máximos apenas encolhem — pontos e escolhas já feitas não
+// são desfeitos, pra não complicar o histórico do personagem.
+export function applyLevelChange(sheet, targetLevel) {
+  const clampedTarget = Math.max(1, targetLevel)
+  let nivel = sheet.nivel || 1
+  let pendingChoicePoints = sheet.pendingChoicePoints || 0
+  let pendingAscensions = sheet.pendingAscensions || 0
+  let resources = sheet.resources
+
+  const direction = clampedTarget > nivel ? 1 : clampedTarget < nivel ? -1 : 0
+  while (nivel !== clampedTarget) {
+    const nextNivel = nivel + direction
+    const derived = computeDerivedStats({
+      nivel: nextNivel,
+      corpo: sheet.atributos?.corpo,
+      mente: sheet.atributos?.mente,
+      alma: sheet.atributos?.alma,
+      lineageId: sheet.lineageId,
+    })
+
+    const nextResources = { ...resources }
+    for (const key of ['pv', 'pd', 'pm']) {
+      const oldMax = resources[key]?.max || 0
+      const newMax = derived[key]
+      const delta = newMax - oldMax
+      const oldCurrent = resources[key]?.current || 0
+      nextResources[key] = {
+        ...resources[key],
+        max: newMax,
+        current: delta > 0 ? oldCurrent + delta : Math.min(oldCurrent, newMax),
+      }
+    }
+    resources = nextResources
+
+    if (direction > 0) {
+      const effects = levelUpEffects(nextNivel)
+      if (effects.grantsChoicePoint) pendingChoicePoints += 1
+      if (effects.isAscension) pendingAscensions += 1
+    }
+
+    nivel = nextNivel
+  }
+
+  const finalDerived = computeDerivedStats({
+    nivel,
+    corpo: sheet.atributos?.corpo,
+    mente: sheet.atributos?.mente,
+    alma: sheet.atributos?.alma,
+    lineageId: sheet.lineageId,
+  })
+
+  return { ...sheet, nivel, derived: finalDerived, resources, pendingChoicePoints, pendingAscensions }
+}
+
+// Aplica uma mudança de atributo (Corpo/Mente/Alma), recalculando PV/PD/PM
+// máximos e curando/ajustando o atual proporcionalmente, igual ao level up.
+export function applyAttributeChange(sheet, attrKey, newValue) {
+  const atributos = { ...sheet.atributos, [attrKey]: Math.max(0, newValue) }
+  const derived = computeDerivedStats({
+    nivel: sheet.nivel,
+    corpo: atributos.corpo,
+    mente: atributos.mente,
+    alma: atributos.alma,
+    lineageId: sheet.lineageId,
+  })
+
+  const resources = { ...sheet.resources }
+  for (const key of ['pv', 'pd', 'pm']) {
+    const oldMax = sheet.resources[key]?.max || 0
+    const newMax = derived[key]
+    const delta = newMax - oldMax
+    const oldCurrent = sheet.resources[key]?.current || 0
+    resources[key] = {
+      ...sheet.resources[key],
+      max: newMax,
+      current: delta > 0 ? oldCurrent + delta : Math.min(oldCurrent, newMax),
+    }
+  }
+
+  return { ...sheet, atributos, derived, resources }
+}

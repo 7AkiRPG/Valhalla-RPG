@@ -457,6 +457,75 @@ label {
   margin-top: 14px;
 }
 
+/* Defesas (RD/Aparar/Bloquear/Esquivar) */
+.combat-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 14px;
+}
+.combat-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.combat-stat-boxes {
+  display: flex;
+  gap: 6px;
+}
+.combat-stat-base {
+  flex: 2;
+  text-align: center;
+}
+.combat-stat-extra {
+  flex: 1;
+  text-align: center;
+  color: var(--ash);
+}
+
+/* Abas da ficha */
+.tab-bar {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--line);
+  margin-bottom: 18px;
+  overflow-x: auto;
+}
+.tab-btn {
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 10px 16px;
+  color: var(--ash);
+  font-family: var(--font-sc);
+  font-size: 0.82rem;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+.tab-btn:hover {
+  background: transparent;
+  color: var(--gold-bright);
+}
+.tab-btn.active {
+  color: var(--gold-bright);
+  border-bottom-color: var(--gold);
+}
+
+/* Controle de nível no cabeçalho */
+.level-control {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 4px;
+}
+.level-control button {
+  padding: 4px 12px;
+}
+.level-control input {
+  width: 60px;
+  text-align: center;
+}
+
 .dice-result {
   text-align: center;
   padding: 20px;

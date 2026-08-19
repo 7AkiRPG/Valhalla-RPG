@@ -3,11 +3,20 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import DiceRoller from '../components/DiceRoller.jsx'
 import ResourceRing from '../components/ResourceRing.jsx'
-import LevelProgression from '../components/LevelProgression.jsx'
-import PathsOverview from '../components/PathsOverview.jsx'
 import DeleteCharacter from '../components/DeleteCharacter.jsx'
 import FreeItemList from '../components/FreeItemList.jsx'
+import CombatStats from '../components/CombatStats.jsx'
+import AbilitiesPanel from '../components/AbilitiesPanel.jsx'
 import { normalizeSheet } from '../lib/characterMigration.js'
+import { applyLevelChange, applyAttributeChange } from '../lib/statCalc.js'
+
+const TABS = [
+  { id: 'atributos', label: 'Atributos' },
+  { id: 'habilidades', label: 'Habilidades' },
+  { id: 'magias', label: 'Magias' },
+  { id: 'equipamentos', label: 'Equipamentos' },
+  { id: 'anotacoes', label: 'Anotações' },
+]
 
 export default function CharacterSheet() {
   const { id } = useParams()
@@ -18,6 +27,8 @@ export default function CharacterSheet() {
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
+  const [activeTab, setActiveTab] = useState('atributos')
+  const [levelDraft, setLevelDraft] = useState('1')
 
   useEffect(() => {
     let cancelled = false
@@ -27,8 +38,10 @@ export default function CharacterSheet() {
       if (cancelled) return
       if (error) setError(error.message)
       else {
+        const normalized = normalizeSheet(data.sheet || {})
         setCharacter(data)
-        setSheet(normalizeSheet(data.sheet || {}))
+        setSheet(normalized)
+        setLevelDraft(String(normalized.nivel || 1))
       }
       setLoading(false)
     }
@@ -41,6 +54,23 @@ export default function CharacterSheet() {
   function updateSheet(next) {
     setSheet(next)
     setDirty(true)
+  }
+
+  function changeLevel(target) {
+    const next = applyLevelChange(sheet, target)
+    setLevelDraft(String(next.nivel))
+    updateSheet(next)
+  }
+
+  function commitLevelDraft() {
+    const n = parseInt(levelDraft, 10)
+    if (!isNaN(n) && n >= 1) changeLevel(n)
+    else setLevelDraft(String(sheet.nivel))
+  }
+
+  function changeAttribute(key, value) {
+    const n = value === '' ? 0 : Number(value)
+    updateSheet(applyAttributeChange(sheet, key, n))
   }
 
   async function handleSave() {
@@ -61,19 +91,18 @@ export default function CharacterSheet() {
   return (
     <div>
       <div className="card">
-        <span className="eyebrow">
-          {sheet.lineageName} · Nível {sheet.nivel || 1}
-        </span>
+        <span className="eyebrow">{sheet.lineageName}</span>
         <h1>{character.name}</h1>
-
-        <div className="grid grid-2" style={{ marginTop: 10 }}>
-          <ResourceRing label="PV" resource={sheet.resources.pv} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pv: r } })} />
-          <ResourceRing label="PD" resource={sheet.resources.pd} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pd: r } })} />
-          <ResourceRing label="PM" resource={sheet.resources.pm} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pm: r } })} />
-          <div className="stat-box" style={{ alignSelf: 'start' }}>
-            <span className="value">{sheet.derived?.rd}</span>
-            <span className="label">RD</span>
-          </div>
+        <div className="level-control">
+          <span className="label">Nível</span>
+          <button type="button" onClick={() => changeLevel((sheet.nivel || 1) - 1)}>−</button>
+          <input
+            value={levelDraft}
+            onChange={(e) => setLevelDraft(e.target.value)}
+            onBlur={commitLevelDraft}
+            onKeyDown={(e) => e.key === 'Enter' && commitLevelDraft()}
+          />
+          <button type="button" onClick={() => changeLevel((sheet.nivel || 1) + 1)}>+</button>
         </div>
       </div>
 
@@ -83,60 +112,103 @@ export default function CharacterSheet() {
         </button>
       </div>
 
-      <div className="grid grid-2">
-        <div className="card">
-          <h3>Atributos</h3>
-          <div className="stat-row">
-            <div className="stat-box">
-              <span className="value">{sheet.atributos?.corpo}</span>
-              <span className="label">Corpo</span>
-            </div>
-            <div className="stat-box">
-              <span className="value">{sheet.atributos?.mente}</span>
-              <span className="label">Mente</span>
-            </div>
-            <div className="stat-box">
-              <span className="value">{sheet.atributos?.alma}</span>
-              <span className="label">Alma</span>
-            </div>
-          </div>
-        </div>
-
-        <div className="card">
-          <h3>Talentos</h3>
-          {(sheet.talentos || []).map((t, i) => (
-            <p key={i}>
-              <strong>{t.nome}</strong> — <span className="muted">{t.descricao}</span>
-            </p>
-          ))}
-        </div>
-
-        <PathsOverview paths={sheet.paths} />
+      <div className="tab-bar">
+        {TABS.map((t) => (
+          <button
+            key={t.id}
+            className={`tab-btn ${activeTab === t.id ? 'active' : ''}`}
+            onClick={() => setActiveTab(t.id)}
+          >
+            {t.label}
+          </button>
+        ))}
       </div>
 
-      <LevelProgression sheet={sheet} onChange={updateSheet} />
+      {activeTab === 'atributos' && (
+        <>
+          <div className="card">
+            <div className="grid grid-2">
+              <ResourceRing label="PV" resource={sheet.resources.pv} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pv: r } })} />
+              <ResourceRing label="PD" resource={sheet.resources.pd} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pd: r } })} />
+              <ResourceRing label="PM" resource={sheet.resources.pm} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pm: r } })} />
+            </div>
+          </div>
 
-      <FreeItemList
-        title="Equipamento"
-        hint="Adicione qualquer item — arma, armadura, artefato — com nome e descrição livres."
-        namePlaceholder="Nome do item"
-        descPlaceholder="Descrição (dano, RD, efeitos, o que você quiser)"
-        addLabel="+ Adicionar item"
-        emptyLabel="Nenhum item ainda."
-        items={sheet.equipamento || []}
-        onChange={(items) => updateSheet({ ...sheet, equipamento: items })}
-      />
+          <CombatStats combatStats={sheet.combatStats} onChange={(cs) => updateSheet({ ...sheet, combatStats: cs })} />
 
-      <FreeItemList
-        title="Magias (truques e feitiços)"
-        hint="Adicione truques e magias com nome e descrição livres — custo, efeito, o que você quiser."
-        namePlaceholder="Nome da magia ou truque"
-        descPlaceholder="Descrição (custo, tempo de conjuração, efeito...)"
-        addLabel="+ Adicionar magia"
-        emptyLabel="Nenhuma magia ainda."
-        items={sheet.magias || []}
-        onChange={(items) => updateSheet({ ...sheet, magias: items })}
-      />
+          <div className="card">
+            <h3>Atributos</h3>
+            <div className="stat-row">
+              {['corpo', 'mente', 'alma'].map((key) => (
+                <div className="stat-box" key={key}>
+                  <span className="value">{sheet.atributos?.[key]}</span>
+                  <span className="label">{key}</span>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 6, justifyContent: 'center' }}>
+                    <button type="button" onClick={() => changeAttribute(key, (sheet.atributos?.[key] || 0) - 1)}>
+                      −
+                    </button>
+                    <button type="button" onClick={() => changeAttribute(key, (sheet.atributos?.[key] || 0) + 1)}>
+                      +
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </>
+      )}
+
+      {activeTab === 'habilidades' && <AbilitiesPanel sheet={sheet} onChange={updateSheet} />}
+
+      {activeTab === 'magias' && (
+        <>
+          <FreeItemList
+            title="Truques"
+            hint="Truques de nível 1, sem custo relevante — nome e descrição livres."
+            namePlaceholder="Nome do truque"
+            descPlaceholder="Descrição (efeito, exigência...)"
+            addLabel="+ Adicionar truque"
+            emptyLabel="Nenhum truque ainda."
+            items={sheet.truques || []}
+            onChange={(items) => updateSheet({ ...sheet, truques: items })}
+          />
+          <FreeItemList
+            title="Magias"
+            hint="Magias com custo em PM — nome e descrição livres."
+            namePlaceholder="Nome da magia"
+            descPlaceholder="Descrição (custo, tempo de conjuração, efeito...)"
+            addLabel="+ Adicionar magia"
+            emptyLabel="Nenhuma magia ainda."
+            items={sheet.magias || []}
+            onChange={(items) => updateSheet({ ...sheet, magias: items })}
+          />
+        </>
+      )}
+
+      {activeTab === 'equipamentos' && (
+        <FreeItemList
+          title="Equipamento"
+          hint="Adicione qualquer item — arma, armadura, artefato — com nome e descrição livres."
+          namePlaceholder="Nome do item"
+          descPlaceholder="Descrição (dano, RD, efeitos, o que você quiser)"
+          addLabel="+ Adicionar item"
+          emptyLabel="Nenhum item ainda."
+          items={sheet.equipamento || []}
+          onChange={(items) => updateSheet({ ...sheet, equipamento: items })}
+        />
+      )}
+
+      {activeTab === 'anotacoes' && (
+        <div className="card">
+          <h3>Anotações</h3>
+          <textarea
+            rows={14}
+            value={sheet.anotacoes || ''}
+            onChange={(e) => updateSheet({ ...sheet, anotacoes: e.target.value })}
+            placeholder="Anote o que quiser sobre a jornada do seu campeão..."
+          />
+        </div>
+      )}
 
       <DiceRoller />
 

@@ -51,3 +51,22 @@ export function checaMargemCritica(d1, d2, margemCritica) {
   const [a, b] = partes
   return (d1 >= a && d2 >= b) || (d1 >= b && d2 >= a)
 }
+
+// Rolagem livre, notação "XdY" (ex: "3d6", "1d20", "3d67"). Aceita espaços,
+// maiúsculas/minúsculas. Retorna null se a notação for inválida.
+export function rollNotation(notation) {
+  const match = String(notation || '')
+    .trim()
+    .toLowerCase()
+    .match(/^(\d{1,3})d(\d{1,4})$/)
+  if (!match) return null
+
+  const count = Math.min(100, Math.max(1, parseInt(match[1], 10)))
+  const sides = Math.max(1, parseInt(match[2], 10))
+
+  const rolls = []
+  for (let i = 0; i < count; i++) rolls.push(rollDie(sides))
+  const total = rolls.reduce((sum, r) => sum + r, 0)
+
+  return { notation: `${count}d${sides}`, rolls, total }
+}

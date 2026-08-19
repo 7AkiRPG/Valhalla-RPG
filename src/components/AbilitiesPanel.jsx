@@ -1,6 +1,5 @@
 import { useState } from 'react'
 import { PATHS } from '../data/paths.js'
-import { computeDerivedStats, levelUpEffects } from '../lib/statCalc.js'
 
 const ASCENSION_BONUSES = [
   { id: 'resistencia', label: 'Vantagem permanente em um teste de resistência' },
@@ -8,7 +7,13 @@ const ASCENSION_BONUSES = [
   { id: 'multiplicador', label: 'Multiplicador Crítico +1' },
 ]
 
-export default function LevelProgression({ sheet, onChange }) {
+const ASCENSION_LABELS = {
+  resistencia: 'Vantagem em resistência',
+  margemCritica: 'Margem Crítica +1',
+  multiplicador: 'Multiplicador Crítico +1',
+}
+
+export default function AbilitiesPanel({ sheet, onChange }) {
   const [resolvingChoice, setResolvingChoice] = useState(null) // 'caminho' | 'talento' | null
   const [choicePathId, setChoicePathId] = useState('')
   const [choiceAbility, setChoiceAbility] = useState('')
@@ -19,53 +24,12 @@ export default function LevelProgression({ sheet, onChange }) {
 
   const ownedPathIds = Object.keys(sheet.paths || {})
 
-  function levelUp() {
-    const newLevel = (sheet.nivel || 1) + 1
-    const derived = computeDerivedStats({
-      nivel: newLevel,
-      corpo: sheet.atributos?.corpo,
-      mente: sheet.atributos?.mente,
-      alma: sheet.atributos?.alma,
-      lineageId: sheet.lineageId,
-    })
-
-    // Sobe o máximo de cada recurso e cura a diferença ganha
-    const resources = { ...sheet.resources }
-    for (const [key, novoMax] of Object.entries({ pv: derived.pv, pd: derived.pd, pm: derived.pm })) {
-      const antigoMax = sheet.resources?.[key]?.max || 0
-      const ganho = Math.max(0, novoMax - antigoMax)
-      resources[key] = {
-        ...sheet.resources[key],
-        max: novoMax,
-        current: (sheet.resources?.[key]?.current || 0) + ganho,
-      }
-    }
-
-    const effects = levelUpEffects(newLevel)
-
-    onChange({
-      ...sheet,
-      nivel: newLevel,
-      derived,
-      resources,
-      pendingChoicePoints: (sheet.pendingChoicePoints || 0) + (effects.grantsChoicePoint ? 1 : 0),
-      pendingAscensions: (sheet.pendingAscensions || 0) + (effects.isAscension ? 1 : 0),
-    })
-  }
-
   function resolveCaminho() {
     if (!choicePathId || !choiceAbility) return
     const paths = { ...(sheet.paths || {}) }
     const existing = paths[choicePathId] || { unlockedPatamar: 1, abilities: [] }
-    paths[choicePathId] = {
-      ...existing,
-      abilities: [...existing.abilities, choiceAbility],
-    }
-    onChange({
-      ...sheet,
-      paths,
-      pendingChoicePoints: Math.max(0, (sheet.pendingChoicePoints || 0) - 1),
-    })
+    paths[choicePathId] = { ...existing, abilities: [...existing.abilities, choiceAbility] }
+    onChange({ ...sheet, paths, pendingChoicePoints: Math.max(0, (sheet.pendingChoicePoints || 0) - 1) })
     setResolvingChoice(null)
     setChoicePathId('')
     setChoiceAbility('')
@@ -81,6 +45,10 @@ export default function LevelProgression({ sheet, onChange }) {
     setResolvingChoice(null)
     setNewTalentName('')
     setNewTalentDesc('')
+  }
+
+  function removeTalento(index) {
+    onChange({ ...sheet, talentos: sheet.talentos.filter((_, i) => i !== index) })
   }
 
   function resolveAscensao() {
@@ -100,8 +68,6 @@ export default function LevelProgression({ sheet, onChange }) {
     setAscBonus('')
   }
 
-  // Abilities disponíveis pra escolha de caminho: qualquer caminho, em qualquer
-  // patamar já desbloqueado (1 se for caminho novo), excluindo as já escolhidas
   const pathOptions = PATHS.map((p) => {
     const owned = sheet.paths?.[p.id]
     const maxPatamar = owned ? owned.unlockedPatamar : 1
@@ -118,25 +84,46 @@ export default function LevelProgression({ sheet, onChange }) {
   const chosenPathOptions = pathOptions.find((o) => o.path.id === choicePathId)
 
   return (
-    <div className="card">
-      <span className="eyebrow">Jornada</span>
-      <h3>Progressão de Nível</h3>
-      <div className="stat-row" style={{ marginBottom: 14 }}>
-        <div className="stat-box">
-          <span className="value">{sheet.nivel || 1}</span>
-          <span className="label">Nível</span>
-        </div>
+    <>
+      <div className="card">
+        <h3>Talentos</h3>
+        {(sheet.talentos || []).length === 0 && <p className="muted">Nenhum talento ainda.</p>}
+        {(sheet.talentos || []).map((t, i) => (
+          <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 10, marginBottom: 8 }}>
+            <p style={{ margin: 0 }}>
+              <strong>{t.nome}</strong> — <span className="muted">{t.descricao}</span>
+            </p>
+            <button className="ghost" onClick={() => removeTalento(i)}>
+              ✕
+            </button>
+          </div>
+        ))}
       </div>
-      <button className="primary" onClick={levelUp}>
-        Subir de nível
-      </button>
 
-      {(sheet.pendingChoicePoints > 0 || sheet.pendingAscensions > 0) && (
-        <div className="rune-divider">ᛟ</div>
-      )}
+      <div className="card">
+        <h3>Caminhos</h3>
+        {ownedPathIds.length === 0 && <p className="muted">Nenhum caminho ainda.</p>}
+        {ownedPathIds.map((id) => {
+          const path = PATHS.find((p) => p.id === id)
+          const owned = sheet.paths[id]
+          return (
+            <div key={id} style={{ marginBottom: 16 }}>
+              <p>
+                <strong style={{ color: 'var(--gold-bright)' }}>{path?.name}</strong>{' '}
+                <span className="pill">Patamar {owned.unlockedPatamar}</span>
+              </p>
+              <ul style={{ margin: '6px 0 0 18px', padding: 0, color: 'var(--ash)' }}>
+                {owned.abilities.map((name) => (
+                  <li key={name}>{name}</li>
+                ))}
+              </ul>
+            </div>
+          )
+        })}
+      </div>
 
       {sheet.pendingChoicePoints > 0 && (
-        <div className="pending-block">
+        <div className="card" style={{ borderColor: 'var(--gold)' }}>
           <p>
             <strong style={{ color: 'var(--gold-bright)' }}>{sheet.pendingChoicePoints}</strong> ponto(s) pendente(s):
             escolha uma habilidade de caminho ou um novo talento.
@@ -211,43 +198,63 @@ export default function LevelProgression({ sheet, onChange }) {
         </div>
       )}
 
-      {sheet.pendingAscensions > 0 && (
-        <div className="pending-block">
-          <p>
-            <strong style={{ color: 'var(--gold-bright)' }}>{sheet.pendingAscensions}</strong> ascensão(ões)
-            pendente(s): desbloqueia automaticamente o próximo patamar de um caminho, e escolha um bônus.
-          </p>
-          <div className="field">
-            <label>Qual caminho desbloqueia o próximo patamar?</label>
-            <select value={ascPathId} onChange={(e) => setAscPathId(e.target.value)}>
-              <option value="">Selecione...</option>
-              {ownedPathIds.map((id) => {
-                const p = PATHS.find((pp) => pp.id === id)
-                const owned = sheet.paths[id]
-                return (
-                  <option key={id} value={id} disabled={owned.unlockedPatamar >= 5}>
-                    {p?.name} (atual: {owned.unlockedPatamar}º patamar)
-                  </option>
-                )
-              })}
-            </select>
+      <div className="card">
+        <h3>Ascensão</h3>
+
+        {sheet.pendingAscensions > 0 ? (
+          <div className="pending-block">
+            <p>
+              <strong style={{ color: 'var(--gold-bright)' }}>{sheet.pendingAscensions}</strong> ascensão(ões)
+              pendente(s): desbloqueia automaticamente o próximo patamar de um caminho, e escolha um bônus.
+            </p>
+            <div className="field">
+              <label>Qual caminho desbloqueia o próximo patamar?</label>
+              <select value={ascPathId} onChange={(e) => setAscPathId(e.target.value)}>
+                <option value="">Selecione...</option>
+                {ownedPathIds.map((id) => {
+                  const p = PATHS.find((pp) => pp.id === id)
+                  const owned = sheet.paths[id]
+                  return (
+                    <option key={id} value={id} disabled={owned.unlockedPatamar >= 5}>
+                      {p?.name} (atual: {owned.unlockedPatamar}º patamar)
+                    </option>
+                  )
+                })}
+              </select>
+            </div>
+            <div className="choice-list">
+              {ASCENSION_BONUSES.map((b) => (
+                <div
+                  key={b.id}
+                  className={`choice-card ${ascBonus === b.id ? 'selected' : ''}`}
+                  onClick={() => setAscBonus(b.id)}
+                >
+                  <p style={{ margin: 0 }}>{b.label}</p>
+                </div>
+              ))}
+            </div>
+            <button className="primary" style={{ marginTop: 10 }} onClick={resolveAscensao} disabled={!ascPathId || !ascBonus}>
+              Confirmar ascensão
+            </button>
           </div>
-          <div className="choice-list">
-            {ASCENSION_BONUSES.map((b) => (
-              <div
-                key={b.id}
-                className={`choice-card ${ascBonus === b.id ? 'selected' : ''}`}
-                onClick={() => setAscBonus(b.id)}
-              >
-                <p style={{ margin: 0 }}>{b.label}</p>
-              </div>
-            ))}
-          </div>
-          <button className="primary" style={{ marginTop: 10 }} onClick={resolveAscensao} disabled={!ascPathId || !ascBonus}>
-            Confirmar ascensão
-          </button>
-        </div>
-      )}
-    </div>
+        ) : (
+          <p className="muted">Nenhuma ascensão pendente.</p>
+        )}
+
+        {(sheet.ascensoes || []).length > 0 && (
+          <>
+            <div className="rune-divider">ᛟ</div>
+            <p className="muted" style={{ marginBottom: 8 }}>Histórico de ascensões:</p>
+            <ul style={{ margin: 0, paddingLeft: 18, color: 'var(--ash)' }}>
+              {sheet.ascensoes.map((a, i) => (
+                <li key={i}>
+                  Nível {a.nivel} — {PATHS.find((p) => p.id === a.pathId)?.name}, {ASCENSION_LABELS[a.bonus]}
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
+      </div>
+    </>
   )
 }
