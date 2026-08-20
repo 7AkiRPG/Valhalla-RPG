@@ -1,72 +1,41 @@
-// Rolador 2d12 do sistema Valhalla.
-//
-// Regras:
-// - Rola 2d12 e soma.
-// - Se os dois dados saírem com o mesmo valor -> crítico.
-// - Soma final <= 3 -> falha crítica.
-// - Soma final > 3 -> crítico normal (dano máximo em combate).
-// - "Crítico de margem": atingido apenas com combinações específicas de
-//   modificadores de arma/magia que aumentam a margem de ameaça (ex: a
-//   arma define "12,12" como margem). Combinação verificada à parte.
-// - Vantagem: dado extra somado ao resultado. Começa em 1d4 e escala até
-//   1d10 (1d4 -> 1d6 -> 1d8 -> 1d10) conforme o número de vantagens.
-
-const VANTAGEM_STEPS = [4, 6, 8, 10]
-
 function rollDie(sides) {
   return Math.floor(Math.random() * sides) + 1
 }
 
-export function rollD12x2({ vantagemNivel = 0 } = {}) {
-  const d1 = rollDie(12)
-  const d2 = rollDie(12)
-  let total = d1 + d2
-  let vantagemRolada = null
+// Rolagem livre por expressão, ex: "1d5+7+2+1d45-21".
+// Aceita quantos termos de dados (NdM) e números fixos forem digitados,
+// somados ou subtraídos em qualquer combinação.
+export function rollExpression(expression) {
+  const cleaned = String(expression || '').replace(/\s+/g, '').toLowerCase()
+  if (!cleaned) return null
 
-  if (vantagemNivel > 0) {
-    const sides = VANTAGEM_STEPS[Math.min(vantagemNivel, VANTAGEM_STEPS.length) - 1]
-    vantagemRolada = rollDie(sides)
-    total += vantagemRolada
+  const tokenRegex = /([+-]?)(\d*d\d+|\d+)/g
+  let match
+  let matchedAny = false
+  let total = 0
+  const parts = []
+
+  while ((match = tokenRegex.exec(cleaned)) !== null) {
+    matchedAny = true
+    const sign = match[1] === '-' ? -1 : 1
+    const term = match[2]
+
+    if (term.includes('d')) {
+      const [countRaw, sidesRaw] = term.split('d')
+      const count = Math.min(100, Math.max(1, countRaw === '' ? 1 : parseInt(countRaw, 10)))
+      const sides = Math.max(1, parseInt(sidesRaw, 10))
+      const rolls = []
+      for (let i = 0; i < count; i++) rolls.push(rollDie(sides))
+      const subtotal = rolls.reduce((a, b) => a + b, 0)
+      total += sign * subtotal
+      parts.push({ type: 'dice', sign, notation: `${count}d${sides}`, rolls })
+    } else {
+      const value = parseInt(term, 10)
+      total += sign * value
+      parts.push({ type: 'flat', sign, value })
+    }
   }
 
-  const isCritico = d1 === d2
-  const isFalhaCritica = total <= 3
-
-  return {
-    d1,
-    d2,
-    vantagemRolada,
-    total,
-    isCritico,
-    isFalhaCritica,
-  }
-}
-
-// Verifica se a soma dos dois d12 (sem vantagem) bate com a margem crítica
-// de uma arma, ex: margemCritica = "12,12" significa que só 12+12 conta.
-export function checaMargemCritica(d1, d2, margemCritica) {
-  if (!margemCritica || margemCritica === '—') return false
-  const partes = margemCritica.split(',').map((n) => parseInt(n.trim(), 10))
-  if (partes.length !== 2) return false
-  const [a, b] = partes
-  return (d1 >= a && d2 >= b) || (d1 >= b && d2 >= a)
-}
-
-// Rolagem livre, notação "XdY" (ex: "3d6", "1d20", "3d67"). Aceita espaços,
-// maiúsculas/minúsculas. Retorna null se a notação for inválida.
-export function rollNotation(notation) {
-  const match = String(notation || '')
-    .trim()
-    .toLowerCase()
-    .match(/^(\d{1,3})d(\d{1,4})$/)
-  if (!match) return null
-
-  const count = Math.min(100, Math.max(1, parseInt(match[1], 10)))
-  const sides = Math.max(1, parseInt(match[2], 10))
-
-  const rolls = []
-  for (let i = 0; i < count; i++) rolls.push(rollDie(sides))
-  const total = rolls.reduce((sum, r) => sum + r, 0)
-
-  return { notation: `${count}d${sides}`, rolls, total }
+  if (!matchedAny) return null
+  return { expression: cleaned, total, parts }
 }

@@ -2,9 +2,10 @@ import { useState } from 'react'
 
 export default function ResourceRing({ label, resource, onChange }) {
   const { current, max, temp } = resource
+  const [editingCurrent, setEditingCurrent] = useState(false)
+  const [currentDraft, setCurrentDraft] = useState(current)
   const [editingMax, setEditingMax] = useState(false)
   const [maxDraft, setMaxDraft] = useState(max)
-  const [bigDelta, setBigDelta] = useState('')
 
   const pct = max > 0 ? Math.max(0, Math.min(1, current / max)) : 0
   const r = 42
@@ -15,10 +16,10 @@ export default function ResourceRing({ label, resource, onChange }) {
     onChange({ ...resource, current: next })
   }
 
-  function commitBigDelta() {
-    const n = parseInt(bigDelta, 10)
-    if (!isNaN(n)) applyDelta(n)
-    setBigDelta('')
+  function commitCurrent() {
+    const n = parseInt(currentDraft, 10)
+    if (!isNaN(n) && n >= 0) onChange({ ...resource, current: n })
+    setEditingCurrent(false)
   }
 
   function commitMax() {
@@ -52,8 +53,23 @@ export default function ResourceRing({ label, resource, onChange }) {
               transform="rotate(-90 50 50)"
             />
           </svg>
-          <div className="ring-center">
-            <span className="ring-current">{current}</span>
+          <div className="ring-center ring-center-row">
+            {editingCurrent ? (
+              <input
+                className="ring-current-input"
+                type="number"
+                autoFocus
+                value={currentDraft}
+                onChange={(e) => setCurrentDraft(e.target.value)}
+                onBlur={commitCurrent}
+                onKeyDown={(e) => e.key === 'Enter' && commitCurrent()}
+              />
+            ) : (
+              <span className="ring-current" onClick={() => { setCurrentDraft(current); setEditingCurrent(true) }}>
+                {current}
+              </span>
+            )}
+            <span className="ring-slash">/</span>
             {editingMax ? (
               <input
                 className="ring-max-input"
@@ -66,7 +82,7 @@ export default function ResourceRing({ label, resource, onChange }) {
               />
             ) : (
               <span className="ring-max" onClick={() => { setMaxDraft(max); setEditingMax(true) }}>
-                / {max}
+                {max}
               </span>
             )}
           </div>
@@ -74,19 +90,6 @@ export default function ResourceRing({ label, resource, onChange }) {
 
         <button type="button" onClick={() => applyDelta(1)} aria-label={`Aumentar ${label}`}>
           +
-        </button>
-      </div>
-
-      <div className="resource-adjust">
-        <input
-          type="number"
-          placeholder="±valor"
-          value={bigDelta}
-          onChange={(e) => setBigDelta(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && commitBigDelta()}
-        />
-        <button type="button" onClick={commitBigDelta}>
-          Aplicar
         </button>
       </div>
 

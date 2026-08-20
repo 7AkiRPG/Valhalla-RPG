@@ -1,84 +1,101 @@
-import { computeDerivedStats, buildInitialResources } from './statCalc.js'
+import { LINEAGES } from '../data/lineages.js'
+import { PATHS } from '../data/paths.js'
 
-// Personagens criados antes da reforma da ficha (recursos editáveis, caminhos
-// com pontos, equipamento livre) têm um formato de dados mais antigo. Essa
-// função preenche os campos novos que faltarem, sem apagar nada que já existe.
+function makeId() {
+  return Math.random().toString(36).slice(2, 10)
+}
+
+// Personagens criados antes das últimas reformas da ficha têm formatos de
+// dados mais antigos (inclusive de quando PV/PD/PM e linhagem ainda eram
+// calculados por fórmula). Essa função converte tudo pro formato manual
+// atual, sem apagar nada que já existia.
 export function normalizeSheet(rawSheet) {
   const sheet = { ...rawSheet }
 
   sheet.atributos = sheet.atributos || { corpo: 0, mente: 0, alma: 0 }
   sheet.nivel = sheet.nivel || 1
 
-  if (!sheet.derived) {
-    sheet.derived = computeDerivedStats({
-      nivel: sheet.nivel,
-      corpo: sheet.atributos.corpo,
-      mente: sheet.atributos.mente,
-      alma: sheet.atributos.alma,
-      lineageId: sheet.lineageId,
-    })
-  }
-
   if (!sheet.resources) {
-    sheet.resources = buildInitialResources(sheet.derived)
+    sheet.resources = {
+      pv: { max: sheet.derived?.pv || 0, current: sheet.derived?.pv || 0, temp: 0 },
+      pd: { max: sheet.derived?.pd || 0, current: sheet.derived?.pd || 0, temp: 0 },
+      pm: { max: sheet.derived?.pm || 0, current: sheet.derived?.pm || 0, temp: 0 },
+    }
   }
 
-  // Formato antigo: pathId/pathName soltos -> paths = { [id]: {...} }
-  if (!sheet.paths) {
-    sheet.paths = sheet.pathId
-      ? { [sheet.pathId]: { unlockedPatamar: 1, abilities: [] } }
-      : {}
+  // Linhagem: converte o formato antigo (lineageId/lineageName + habilidades
+  // fixas do livro) em lista livre, igual talentos/caminhos
+  if (!Array.isArray(sheet.lineagem)) {
+    const items = []
+    if (sheet.lineageName) {
+      items.push({ id: makeId(), nome: sheet.lineageName, descricao: '' })
+      const lineageDef = LINEAGES.find((l) => l.id === sheet.lineageId)
+      for (const a of lineageDef?.abilities || []) {
+        items.push({ id: makeId(), nome: a.name, descricao: a.desc })
+      }
+    }
+    sheet.lineagem = items
   }
+  sheet.lineagem = sheet.lineagem.map((l) => (l.id ? l : { ...l, id: makeId() }))
 
-  // Corrige um bug anterior que salvava habilidades de caminho como objeto
-  // ({patamar, name}) em vez de apenas o nome (texto). Isso quebrava a ficha
-  // (React não consegue renderizar um objeto direto).
-  const fixedPaths = {}
-  for (const [pid, data] of Object.entries(sheet.paths)) {
-    const abilities = (data.abilities || [])
-      .map((a) => (typeof a === 'string' ? a : a?.name))
-      .filter(Boolean)
-    fixedPaths[pid] = { ...data, abilities }
-  }
-  sheet.paths = fixedPaths
-
-  // Formato antigo: talento (singular, objeto) -> talentos (array)
+  // Talentos: garante formato de lista livre (com id) — antes podia ser um
+  // objeto único {nome, descricao}
   if (!Array.isArray(sheet.talentos)) {
     sheet.talentos = sheet.talento ? [sheet.talento] : []
   }
+  sheet.talentos = sheet.talentos.map((t) => (t.id ? t : { ...t, id: makeId() }))
 
-  // Formato antigo: equipamento = { arma, armadura } -> equipamento = [itens]
+  // Caminhos: converte o formato estruturado antigo (patamares/habilidades
+  // por caminho) em lista livre, igual equipamento/magias
+  if (!Array.isArray(sheet.caminhos)) {
+    const items = []
+    if (sheet.paths) {
+      for (const [pid, data] of Object.entries(sheet.paths)) {
+        const pathDef = PATHS.find((p) => p.id === pid)
+        const abilities = (data.abilities || [])
+          .map((a) => (typeof a === 'string' ? a : a?.name))
+          .filter(Boolean)
+        items.push({ id: makeId(), nome: pathDef?.name || pid, descricao: abilities.join(', ') })
+      }
+    } else if (sheet.pathId) {
+      const pathDef = PATHS.find((p) => p.id === sheet.pathId)
+      items.push({ id: makeId(), nome: pathDef?.name || sheet.pathId, descricao: '' })
+    }
+    sheet.caminhos = items
+  }
+  sheet.caminhos = sheet.caminhos.map((c) => (c.id ? c : { ...c, id: makeId() }))
+
+  // Equipamento: formato antigo { arma, armadura } -> lista
   if (!Array.isArray(sheet.equipamento)) {
     const legacy = sheet.equipamento || {}
     const items = []
-    if (legacy.arma) items.push({ id: 'legacy-arma', nome: legacy.arma, descricao: '' })
-    if (legacy.armadura) items.push({ id: 'legacy-armadura', nome: legacy.armadura, descricao: '' })
+    if (legacy.arma) items.push({ id: makeId(), nome: legacy.arma, descricao: '' })
+    if (legacy.armadura) items.push({ id: makeId(), nome: legacy.armadura, descricao: '' })
     sheet.equipamento = items
   }
 
-  sheet.pendingChoicePoints = sheet.pendingChoicePoints || 0
-  sheet.pendingAscensions = sheet.pendingAscensions || 0
-  sheet.ascensoes = sheet.ascensoes || []
-
-  // Formato antigo: magias = { truque, magia } (nomes soltos) -> magias = [itens]
+  // Magias: formato antigo { truque, magia } -> lista
   if (!Array.isArray(sheet.magias)) {
     const legacy = sheet.magias || {}
     const items = []
-    if (legacy.truque) items.push({ id: 'legacy-truque', nome: legacy.truque, descricao: '' })
-    if (legacy.magia) items.push({ id: 'legacy-magia', nome: legacy.magia, descricao: '' })
+    if (legacy.truque) items.push({ id: makeId(), nome: legacy.truque, descricao: '' })
+    if (legacy.magia) items.push({ id: makeId(), nome: legacy.magia, descricao: '' })
     sheet.magias = items
   }
-
   if (!Array.isArray(sheet.truques)) {
     sheet.truques = []
   }
 
-  if (!sheet.combatStats) {
+  // Defesas: formato antigo {base, extra} por campo -> valor único
+  const isLegacyShape = sheet.combatStats && typeof sheet.combatStats.rd === 'object'
+  if (!sheet.combatStats || isLegacyShape) {
+    const legacy = sheet.combatStats || {}
+    const collapse = (v) => (v && typeof v === 'object' ? (v.base || 0) + (v.extra || 0) : v || 0)
     sheet.combatStats = {
-      rd: { base: sheet.derived?.rd || 0, extra: 0 },
-      aparar: { base: 0, extra: 0 },
-      bloquear: { base: 0, extra: 0 },
-      esquivar: { base: 0, extra: 0 },
+      rd: legacy.rd !== undefined ? collapse(legacy.rd) : sheet.derived?.rd || 0,
+      aparar: collapse(legacy.aparar),
+      bloquear: collapse(legacy.bloquear),
+      esquivar: collapse(legacy.esquivar),
     }
   }
 

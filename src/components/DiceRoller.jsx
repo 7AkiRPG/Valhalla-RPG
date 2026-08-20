@@ -1,84 +1,50 @@
 import { useState } from 'react'
-import { rollD12x2, rollNotation } from '../lib/dice.js'
+import { rollExpression } from '../lib/dice.js'
 
 export default function DiceRoller() {
-  const [vantagem, setVantagem] = useState(0)
+  const [expression, setExpression] = useState('')
   const [result, setResult] = useState(null)
-
-  const [notation, setNotation] = useState('')
-  const [customResult, setCustomResult] = useState(null)
-  const [customError, setCustomError] = useState(null)
+  const [error, setError] = useState(null)
 
   function roll() {
-    setResult(rollD12x2({ vantagemNivel: vantagem }))
-  }
-
-  function rollCustom() {
-    const r = rollNotation(notation)
+    const r = rollExpression(expression)
     if (!r) {
-      setCustomError('Notação inválida. Use o formato NdM, ex: 3d6, 1d20.')
-      setCustomResult(null)
+      setError('Digite uma expressão válida, ex: 1d5+7+2+1d45-21')
+      setResult(null)
       return
     }
-    setCustomError(null)
-    setCustomResult(r)
+    setError(null)
+    setResult(r)
   }
 
   return (
     <div className="card">
-      <span className="eyebrow">Rolagem do sistema</span>
-      <h3>Rolador de Dados (2d12)</h3>
-
-      <div className="field">
-        <label>Nível de vantagem (0 a 4)</label>
-        <select value={vantagem} onChange={(e) => setVantagem(Number(e.target.value))}>
-          <option value={0}>Sem vantagem</option>
-          <option value={1}>Vantagem +1d4</option>
-          <option value={2}>Vantagem +1d6</option>
-          <option value={3}>Vantagem +1d8</option>
-          <option value={4}>Vantagem +1d10</option>
-        </select>
+      <span className="eyebrow">Rolador de Dados</span>
+      <h3>Qualquer expressão (ex: 1d5+7+2+1d45-21)</h3>
+      <div style={{ display: 'flex', gap: 10 }}>
+        <input
+          value={expression}
+          onChange={(e) => setExpression(e.target.value)}
+          placeholder="Ex: 1d20+5"
+          onKeyDown={(e) => e.key === 'Enter' && roll()}
+        />
+        <button className="primary" onClick={roll}>
+          Rolar
+        </button>
       </div>
 
-      <button className="primary" onClick={roll}>
-        Rolar 2d12
-      </button>
+      {error && <p style={{ color: 'var(--blood)' }}>{error}</p>}
 
       {result && (
         <div className="dice-result">
           <span className="total">{result.total}</span>
           <div className="muted">
-            d12: {result.d1} + {result.d2}
-            {result.vantagemRolada !== null ? ` + ${result.vantagemRolada} (vantagem)` : ''}
-          </div>
-          {result.isCritico && <div className="tag tag-critico">★ Crítico ★</div>}
-          {result.isFalhaCritica && <div className="tag tag-falha">Falha crítica</div>}
-        </div>
-      )}
-
-      <div className="rune-divider">ᛟ</div>
-
-      <span className="eyebrow">Rolagem livre</span>
-      <h3>Qualquer notação (ex: 3d6, 1d20)</h3>
-      <div style={{ display: 'flex', gap: 10 }}>
-        <input
-          value={notation}
-          onChange={(e) => setNotation(e.target.value)}
-          placeholder="Ex: 3d6"
-          onKeyDown={(e) => e.key === 'Enter' && rollCustom()}
-        />
-        <button className="primary" onClick={rollCustom}>
-          Rolar
-        </button>
-      </div>
-
-      {customError && <p style={{ color: 'var(--blood)' }}>{customError}</p>}
-
-      {customResult && (
-        <div className="dice-result">
-          <span className="total">{customResult.total}</span>
-          <div className="muted">
-            {customResult.notation}: {customResult.rolls.join(' + ')}
+            {result.parts.map((p, i) => (
+              <span key={i}>
+                {i > 0 ? (p.sign < 0 ? ' − ' : ' + ') : p.sign < 0 ? '−' : ''}
+                {p.type === 'dice' ? `${p.notation} [${p.rolls.join(', ')}]` : p.value}
+              </span>
+            ))}
           </div>
         </div>
       )}

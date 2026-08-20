@@ -3,12 +3,11 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import DiceRoller from '../components/DiceRoller.jsx'
 import ResourceRing from '../components/ResourceRing.jsx'
+import LevelDial from '../components/LevelDial.jsx'
 import DeleteCharacter from '../components/DeleteCharacter.jsx'
 import FreeItemList from '../components/FreeItemList.jsx'
 import CombatStats from '../components/CombatStats.jsx'
-import AbilitiesPanel from '../components/AbilitiesPanel.jsx'
 import { normalizeSheet } from '../lib/characterMigration.js'
-import { applyLevelChange, applyAttributeChange } from '../lib/statCalc.js'
 
 const TABS = [
   { id: 'atributos', label: 'Atributos' },
@@ -28,7 +27,6 @@ export default function CharacterSheet() {
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
   const [activeTab, setActiveTab] = useState('atributos')
-  const [levelDraft, setLevelDraft] = useState('1')
 
   useEffect(() => {
     let cancelled = false
@@ -38,10 +36,8 @@ export default function CharacterSheet() {
       if (cancelled) return
       if (error) setError(error.message)
       else {
-        const normalized = normalizeSheet(data.sheet || {})
         setCharacter(data)
-        setSheet(normalized)
-        setLevelDraft(String(normalized.nivel || 1))
+        setSheet(normalizeSheet(data.sheet || {}))
       }
       setLoading(false)
     }
@@ -57,20 +53,12 @@ export default function CharacterSheet() {
   }
 
   function changeLevel(target) {
-    const next = applyLevelChange(sheet, target)
-    setLevelDraft(String(next.nivel))
-    updateSheet(next)
-  }
-
-  function commitLevelDraft() {
-    const n = parseInt(levelDraft, 10)
-    if (!isNaN(n) && n >= 1) changeLevel(n)
-    else setLevelDraft(String(sheet.nivel))
+    updateSheet({ ...sheet, nivel: Math.max(1, target) })
   }
 
   function changeAttribute(key, value) {
-    const n = value === '' ? 0 : Number(value)
-    updateSheet(applyAttributeChange(sheet, key, n))
+    const n = value === '' ? 0 : Math.max(0, Number(value))
+    updateSheet({ ...sheet, atributos: { ...sheet.atributos, [key]: n } })
   }
 
   async function handleSave() {
@@ -91,18 +79,9 @@ export default function CharacterSheet() {
   return (
     <div>
       <div className="card">
-        <span className="eyebrow">{sheet.lineageName}</span>
-        <h1>{character.name}</h1>
-        <div className="level-control">
-          <span className="label">Nível</span>
-          <button type="button" onClick={() => changeLevel((sheet.nivel || 1) - 1)}>−</button>
-          <input
-            value={levelDraft}
-            onChange={(e) => setLevelDraft(e.target.value)}
-            onBlur={commitLevelDraft}
-            onKeyDown={(e) => e.key === 'Enter' && commitLevelDraft()}
-          />
-          <button type="button" onClick={() => changeLevel((sheet.nivel || 1) + 1)}>+</button>
+        <div className="header-row">
+          <LevelDial nivel={sheet.nivel || 1} onChange={changeLevel} />
+          <h1>{character.name}</h1>
         </div>
       </div>
 
@@ -158,7 +137,40 @@ export default function CharacterSheet() {
         </>
       )}
 
-      {activeTab === 'habilidades' && <AbilitiesPanel sheet={sheet} onChange={updateSheet} />}
+      {activeTab === 'habilidades' && (
+        <>
+          <FreeItemList
+            title="Linhagem"
+            hint="Adicione a linhagem e habilidades raciais com nome e descrição livres."
+            namePlaceholder="Nome da linhagem ou habilidade"
+            descPlaceholder="Descrição do efeito"
+            addLabel="+ Adicionar"
+            emptyLabel="Nenhuma linhagem ainda."
+            items={sheet.lineagem || []}
+            onChange={(items) => updateSheet({ ...sheet, lineagem: items })}
+          />
+          <FreeItemList
+            title="Talentos"
+            hint="Adicione talentos com nome e descrição livres."
+            namePlaceholder="Nome do talento"
+            descPlaceholder="Descrição, efeito e limitações"
+            addLabel="+ Adicionar talento"
+            emptyLabel="Nenhum talento ainda."
+            items={sheet.talentos || []}
+            onChange={(items) => updateSheet({ ...sheet, talentos: items })}
+          />
+          <FreeItemList
+            title="Caminhos"
+            hint="Adicione caminhos e habilidades com nome e descrição livres."
+            namePlaceholder="Nome do caminho ou habilidade"
+            descPlaceholder="Descrição do efeito"
+            addLabel="+ Adicionar caminho"
+            emptyLabel="Nenhum caminho ainda."
+            items={sheet.caminhos || []}
+            onChange={(items) => updateSheet({ ...sheet, caminhos: items })}
+          />
+        </>
+      )}
 
       {activeTab === 'magias' && (
         <>
