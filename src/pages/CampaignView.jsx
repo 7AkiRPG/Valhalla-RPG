@@ -105,7 +105,7 @@ export default function CampaignView() {
           <Link key={c.id} to={`/personagem/${c.id}`} className="card" style={{ textDecoration: 'none' }}>
             <h4>{c.name}</h4>
             <p className="muted">
-              {c.sheet?.lineageName} · Nível {c.sheet?.nivel || 1}
+              Nível {c.sheet?.nivelAtual ?? c.sheet?.nivel ?? 1}
             </p>
           </Link>
         ))}

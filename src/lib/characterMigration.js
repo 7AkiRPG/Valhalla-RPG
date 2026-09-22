@@ -6,14 +6,30 @@ function makeId() {
 }
 
 // Personagens criados antes das últimas reformas da ficha têm formatos de
-// dados mais antigos (inclusive de quando PV/PD/PM e linhagem ainda eram
-// calculados por fórmula). Essa função converte tudo pro formato manual
-// atual, sem apagar nada que já existia.
+// dados mais antigos. Essa função converte tudo pro formato atual (6
+// atributos, nível atual/total, habilidades e magias unificadas, defesas em
+// texto, pontos de ação, perícias e inventário com forma), sem apagar nada
+// que já existia.
 export function normalizeSheet(rawSheet) {
   const sheet = { ...rawSheet }
 
-  sheet.atributos = sheet.atributos || { corpo: 0, mente: 0, alma: 0 }
-  sheet.nivel = sheet.nivel || 1
+  // Atributos: agora são 6 (Corpo, Mente, Alma, Rituais, Selos, Sigilos)
+  const oldAtributos = sheet.atributos || {}
+  sheet.atributos = {
+    corpo: oldAtributos.corpo || 0,
+    mente: oldAtributos.mente || 0,
+    alma: oldAtributos.alma || 0,
+    rituais: oldAtributos.rituais || 0,
+    selos: oldAtributos.selos || 0,
+    sigilos: oldAtributos.sigilos || 0,
+  }
+
+  // Nível: antes era um valor único, agora são dois (Atual e Total)
+  if (sheet.nivelAtual === undefined || sheet.nivelTotal === undefined) {
+    const legacyNivel = sheet.nivel || 1
+    sheet.nivelAtual = sheet.nivelAtual ?? legacyNivel
+    sheet.nivelTotal = sheet.nivelTotal ?? legacyNivel
+  }
 
   if (!sheet.resources) {
     sheet.resources = {
@@ -23,33 +39,29 @@ export function normalizeSheet(rawSheet) {
     }
   }
 
-  // Linhagem: converte o formato antigo (lineageId/lineageName + habilidades
-  // fixas do livro) em lista livre, igual talentos/caminhos
-  if (!Array.isArray(sheet.lineagem)) {
+  // Habilidades: unifica linhagem + talentos + caminhos numa lista só
+  if (!Array.isArray(sheet.habilidades)) {
     const items = []
-    if (sheet.lineageName) {
+
+    if (Array.isArray(sheet.lineagem)) {
+      items.push(...sheet.lineagem)
+    } else if (sheet.lineageName) {
       items.push({ id: makeId(), nome: sheet.lineageName, descricao: '' })
       const lineageDef = LINEAGES.find((l) => l.id === sheet.lineageId)
       for (const a of lineageDef?.abilities || []) {
         items.push({ id: makeId(), nome: a.name, descricao: a.desc })
       }
     }
-    sheet.lineagem = items
-  }
-  sheet.lineagem = sheet.lineagem.map((l) => (l.id ? l : { ...l, id: makeId() }))
 
-  // Talentos: garante formato de lista livre (com id) — antes podia ser um
-  // objeto único {nome, descricao}
-  if (!Array.isArray(sheet.talentos)) {
-    sheet.talentos = sheet.talento ? [sheet.talento] : []
-  }
-  sheet.talentos = sheet.talentos.map((t) => (t.id ? t : { ...t, id: makeId() }))
+    if (Array.isArray(sheet.talentos)) {
+      items.push(...sheet.talentos)
+    } else if (sheet.talento) {
+      items.push(sheet.talento)
+    }
 
-  // Caminhos: converte o formato estruturado antigo (patamares/habilidades
-  // por caminho) em lista livre, igual equipamento/magias
-  if (!Array.isArray(sheet.caminhos)) {
-    const items = []
-    if (sheet.paths) {
+    if (Array.isArray(sheet.caminhos)) {
+      items.push(...sheet.caminhos)
+    } else if (sheet.paths) {
       for (const [pid, data] of Object.entries(sheet.paths)) {
         const pathDef = PATHS.find((p) => p.id === pid)
         const abilities = (data.abilities || [])
@@ -61,11 +73,13 @@ export function normalizeSheet(rawSheet) {
       const pathDef = PATHS.find((p) => p.id === sheet.pathId)
       items.push({ id: makeId(), nome: pathDef?.name || sheet.pathId, descricao: '' })
     }
-    sheet.caminhos = items
-  }
-  sheet.caminhos = sheet.caminhos.map((c) => (c.id ? c : { ...c, id: makeId() }))
 
-  // Equipamento: formato antigo { arma, armadura } -> lista
+    sheet.habilidades = items
+  }
+  sheet.habilidades = sheet.habilidades.map((h) => (h.id ? h : { ...h, id: makeId() }))
+
+  // Equipamento: formato antigo { arma, armadura } -> lista (mantido como
+  // referência antes de virar itens do inventário, se ainda não migrado)
   if (!Array.isArray(sheet.equipamento)) {
     const legacy = sheet.equipamento || {}
     const items = []
@@ -74,29 +88,56 @@ export function normalizeSheet(rawSheet) {
     sheet.equipamento = items
   }
 
-  // Magias: formato antigo { truque, magia } -> lista
-  if (!Array.isArray(sheet.magias)) {
-    const legacy = sheet.magias || {}
+  // Magias: unifica truques + magias numa lista só
+  if (!Array.isArray(sheet.magiasUnificadas)) {
     const items = []
-    if (legacy.truque) items.push({ id: makeId(), nome: legacy.truque, descricao: '' })
-    if (legacy.magia) items.push({ id: makeId(), nome: legacy.magia, descricao: '' })
-    sheet.magias = items
+    if (Array.isArray(sheet.magias)) {
+      items.push(...sheet.magias)
+    } else if (sheet.magias && typeof sheet.magias === 'object') {
+      const legacy = sheet.magias
+      if (legacy.truque) items.push({ id: makeId(), nome: legacy.truque, descricao: '' })
+      if (legacy.magia) items.push({ id: makeId(), nome: legacy.magia, descricao: '' })
+    }
+    if (Array.isArray(sheet.truques)) {
+      items.push(...sheet.truques)
+    }
+    sheet.magiasUnificadas = items
   }
-  if (!Array.isArray(sheet.truques)) {
-    sheet.truques = []
+  sheet.magiasUnificadas = sheet.magiasUnificadas.map((m) => (m.id ? m : { ...m, id: makeId() }))
+
+  // Defesas: viram linhas de texto livre (Aparar, Bloquear, Esquivar,
+  // Resistências) — RD deixou de existir como campo próprio
+  const legacyCombat = sheet.combatStats || {}
+  const collapseToText = (v) => {
+    if (v === undefined || v === null) return ''
+    if (typeof v === 'object') return String((v.base || 0) + (v.extra || 0))
+    return String(v)
+  }
+  if (
+    typeof sheet.combatStats?.aparar !== 'string' &&
+    typeof sheet.combatStats?.bloquear !== 'string'
+  ) {
+    sheet.combatStats = {
+      aparar: collapseToText(legacyCombat.aparar),
+      bloquear: collapseToText(legacyCombat.bloquear),
+      esquivar: collapseToText(legacyCombat.esquivar),
+      resistencias: collapseToText(legacyCombat.resistencias),
+    }
   }
 
-  // Defesas: formato antigo {base, extra} por campo -> valor único
-  const isLegacyShape = sheet.combatStats && typeof sheet.combatStats.rd === 'object'
-  if (!sheet.combatStats || isLegacyShape) {
-    const legacy = sheet.combatStats || {}
-    const collapse = (v) => (v && typeof v === 'object' ? (v.base || 0) + (v.extra || 0) : v || 0)
-    sheet.combatStats = {
-      rd: legacy.rd !== undefined ? collapse(legacy.rd) : sheet.derived?.rd || 0,
-      aparar: collapse(legacy.aparar),
-      bloquear: collapse(legacy.bloquear),
-      esquivar: collapse(legacy.esquivar),
-    }
+  // Pontos de Ação: novo, começa zerado (só os 2 vermelhos fixos, sem extras)
+  if (!sheet.pontosAcao) {
+    sheet.pontosAcao = { esquerda: 0, direita: 0 }
+  }
+
+  // Perícias: novo, valores por perícia (chave = id da perícia)
+  if (!sheet.pericias) {
+    sheet.pericias = {}
+  }
+
+  // Inventário: novo, lista de itens com forma (Tetris) e posição na grade
+  if (!Array.isArray(sheet.inventario)) {
+    sheet.inventario = []
   }
 
   if (typeof sheet.anotacoes !== 'string') {

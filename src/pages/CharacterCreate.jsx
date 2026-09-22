@@ -17,15 +17,16 @@ export default function CharacterCreate() {
     setError(null)
     try {
       const sheet = {
-        nivel: 1,
-        atributos: { corpo: 0, mente: 0, alma: 0 },
-        lineagem: [],
-        talentos: [],
-        caminhos: [],
+        nivelAtual: 1,
+        nivelTotal: 1,
+        atributos: { corpo: 0, mente: 0, alma: 0, rituais: 0, selos: 0, sigilos: 0 },
+        habilidades: [],
+        magiasUnificadas: [],
         equipamento: [],
-        magias: [],
-        truques: [],
-        combatStats: { rd: 0, aparar: 0, bloquear: 0, esquivar: 0 },
+        combatStats: { aparar: '', bloquear: '', esquivar: '', resistencias: '' },
+        pontosAcao: { esquerda: 0, direita: 0 },
+        pericias: {},
+        inventario: [],
         anotacoes: '',
         resources: {
           pv: { max: 0, current: 0, temp: 0 },
@@ -64,8 +65,7 @@ export default function CharacterCreate() {
         </button>
       </form>
       <p className="muted" style={{ marginTop: 16 }}>
-        Depois de criado, você preenche tudo — atributos, linhagem, talentos, caminhos, magias e equipamento — direto
-        na ficha.
+        Depois de criado, você preenche tudo direto na ficha.
       </p>
     </div>
   )

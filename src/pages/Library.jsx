@@ -57,9 +57,7 @@ export default function Library() {
         {characters.map((c) => (
           <Link key={c.id} to={`/personagem/${c.id}`} className="card" style={{ textDecoration: 'none' }}>
             <h3>{c.name}</h3>
-            <p className="muted">
-              {c.sheet?.lineageName || 'Linhagem indefinida'} · Nível {c.sheet?.nivel || 1}
-            </p>
+            <p className="muted">Nível {c.sheet?.nivelAtual ?? c.sheet?.nivel ?? 1}</p>
           </Link>
         ))}
       </div>

@@ -34,9 +34,9 @@ export default function FreeItemList({
   }
 
   return (
-    <div className="card">
-      <h3>{title}</h3>
-      <p className="muted">{hint}</p>
+    <div className="card free-item-list">
+      {title && <h3>{title}</h3>}
+      {hint && <p className="muted">{hint}</p>}
 
       <div className="equipment-list">
         {items.map((item, index) => (
