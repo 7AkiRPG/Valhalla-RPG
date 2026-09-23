@@ -2,7 +2,7 @@ import { useState } from 'react'
 
 const COLS = 8
 const ROWS = 14
-const SHAPE_SIZE = 4
+const SHAPE_SIZE = 8
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -50,6 +50,21 @@ function findPlacement(items, shape) {
     }
   }
   return null
+}
+
+function shapeDimensions(grid) {
+  const cells = []
+  for (let y = 0; y < SHAPE_SIZE; y++) {
+    for (let x = 0; x < SHAPE_SIZE; x++) {
+      if (grid[y][x]) cells.push([x, y])
+    }
+  }
+  if (cells.length === 0) return null
+  const xs = cells.map((c) => c[0])
+  const ys = cells.map((c) => c[1])
+  const width = Math.max(...xs) - Math.min(...xs) + 1
+  const height = Math.max(...ys) - Math.min(...ys) + 1
+  return { width, height }
 }
 
 export default function InventoryGrid({ items, onChange }) {
@@ -141,6 +156,11 @@ export default function InventoryGrid({ items, onChange }) {
               ))
             )}
           </div>
+          {shapeDimensions(shapeGrid) && (
+            <p className="muted">
+              Espaço: {shapeDimensions(shapeGrid).width} × {shapeDimensions(shapeGrid).height}
+            </p>
+          )}
           <div className="field">
             <label>Descrição</label>
             <textarea rows={3} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />

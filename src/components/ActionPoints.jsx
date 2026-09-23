@@ -32,6 +32,7 @@ export default function ActionPoints({ pontosAcao, onChange }) {
         ))}
         <Triangle color="#8c3230" up={true} />
         <Triangle color="#8c3230" up={false} />
+        <Triangle color="#8c3230" up={true} />
         {Array.from({ length: direita }).map((_, i) => (
           <Triangle key={`d${i}`} color="#7a5ac9" up={i % 2 === 0} />
         ))}

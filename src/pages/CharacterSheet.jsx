@@ -4,10 +4,10 @@ import { supabase } from '../lib/supabaseClient.js'
 import DiceRoller from '../components/DiceRoller.jsx'
 import LevelDial from '../components/LevelDial.jsx'
 import DeleteCharacter from '../components/DeleteCharacter.jsx'
-import FreeItemList from '../components/FreeItemList.jsx'
+import CompactItemList from '../components/CompactItemList.jsx'
 import HexAttributes from '../components/HexAttributes.jsx'
 import ActionPoints from '../components/ActionPoints.jsx'
-import ResourceCircle from '../components/ResourceCircle.jsx'
+import ResourceRing from '../components/ResourceRing.jsx'
 import TextLine from '../components/TextLine.jsx'
 import PericiasDrawer from '../components/PericiasDrawer.jsx'
 import SideDrawer from '../components/SideDrawer.jsx'
@@ -100,24 +100,16 @@ export default function CharacterSheet() {
           </div>
 
           {leftTab === 'habilidades' && (
-            <FreeItemList
-              title=""
-              hint=""
-              namePlaceholder="Nome da habilidade"
-              descPlaceholder="Descrição"
-              addLabel="+"
+            <CompactItemList
+              createPlaceholder="Nome da habilidade"
               emptyLabel="Nenhuma habilidade ainda."
               items={sheet.habilidades || []}
               onChange={(items) => updateSheet({ ...sheet, habilidades: items })}
             />
           )}
           {leftTab === 'magias' && (
-            <FreeItemList
-              title=""
-              hint=""
-              namePlaceholder="Nome da magia"
-              descPlaceholder="Descrição"
-              addLabel="+"
+            <CompactItemList
+              createPlaceholder="Nome da magia"
               emptyLabel="Nenhuma magia ainda."
               items={sheet.magiasUnificadas || []}
               onChange={(items) => updateSheet({ ...sheet, magiasUnificadas: items })}
@@ -126,17 +118,9 @@ export default function CharacterSheet() {
         </div>
 
         <div className="sheet-col sheet-col-center">
-          <TextLine label="Nome" value={nameDraft} onChange={updateName} big />
-
-          <div className="level-pair">
-            <div className="level-pair-item">
-              <LevelDial nivel={sheet.nivelAtual || 1} onChange={(n) => updateSheet({ ...sheet, nivelAtual: Math.max(1, n) })} />
-              <span className="label">Nível Atual</span>
-            </div>
-            <div className="level-pair-item">
-              <LevelDial nivel={sheet.nivelTotal || 1} onChange={(n) => updateSheet({ ...sheet, nivelTotal: Math.max(1, n) })} />
-              <span className="label">Nível Total</span>
-            </div>
+          <div className="header-name-row">
+            <LevelDial nivel={sheet.nivelAtual || 1} onChange={(n) => updateSheet({ ...sheet, nivelAtual: Math.max(1, n) })} />
+            <TextLine label="Nome" value={nameDraft} onChange={updateName} big />
           </div>
 
           <HexAttributes atributos={sheet.atributos} onChange={(a) => updateSheet({ ...sheet, atributos: a })} />
@@ -144,9 +128,9 @@ export default function CharacterSheet() {
           <ActionPoints pontosAcao={sheet.pontosAcao} onChange={(pa) => updateSheet({ ...sheet, pontosAcao: pa })} />
 
           <div className="resources-row">
-            <ResourceCircle label="PV" resource={sheet.resources.pv} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pv: r } })} />
-            <ResourceCircle label="PD" resource={sheet.resources.pd} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pd: r } })} />
-            <ResourceCircle label="PM" resource={sheet.resources.pm} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pm: r } })} />
+            <ResourceRing label="PV" resource={sheet.resources.pv} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pv: r } })} />
+            <ResourceRing label="PD" resource={sheet.resources.pd} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pd: r } })} />
+            <ResourceRing label="PM" resource={sheet.resources.pm} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pm: r } })} />
           </div>
 
           <TextLine label="Aparar" value={sheet.combatStats?.aparar} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, aparar: v } })} />
