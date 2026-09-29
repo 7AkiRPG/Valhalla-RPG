@@ -125,9 +125,18 @@ export function normalizeSheet(rawSheet) {
     }
   }
 
-  // Pontos de Ação: novo, começa zerado (só os 2 vermelhos fixos, sem extras)
-  if (!sheet.pontosAcao) {
-    sheet.pontosAcao = { esquerda: 0, direita: 0 }
+  // Pontos de Ação: agora só tem extras verdes (sem roxo), com estado de
+  // "gasto/disponível" por triângulo
+  if (!sheet.pontosAcao || sheet.pontosAcao.extra === undefined) {
+    const legacy = sheet.pontosAcao || {}
+    sheet.pontosAcao = { extra: legacy.esquerda || 0, toggledOff: [] }
+  }
+
+  if (typeof sheet.bonusArcano !== 'string') {
+    sheet.bonusArcano = ''
+  }
+  if (typeof sheet.dtArcana !== 'string') {
+    sheet.dtArcana = ''
   }
 
   // Perícias: novo, valores por perícia (chave = id da perícia)

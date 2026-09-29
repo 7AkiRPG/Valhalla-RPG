@@ -24,7 +24,6 @@ export default function CharacterSheet() {
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)
   const [dirty, setDirty] = useState(false)
-  const [leftTab, setLeftTab] = useState('habilidades')
 
   useEffect(() => {
     let cancelled = false
@@ -84,37 +83,13 @@ export default function CharacterSheet() {
 
       <div className="sheet-columns">
         <div className="sheet-col sheet-col-left">
-          <div className="left-toggle">
-            <button
-              className={`toggle-label ${leftTab === 'habilidades' ? 'active' : ''}`}
-              onClick={() => setLeftTab('habilidades')}
-            >
-              habilidades
-            </button>
-            <button
-              className={`toggle-label ${leftTab === 'magias' ? 'active' : ''}`}
-              onClick={() => setLeftTab('magias')}
-            >
-              Magias
-            </button>
-          </div>
-
-          {leftTab === 'habilidades' && (
-            <CompactItemList
-              createPlaceholder="Nome da habilidade"
-              emptyLabel="Nenhuma habilidade ainda."
-              items={sheet.habilidades || []}
-              onChange={(items) => updateSheet({ ...sheet, habilidades: items })}
-            />
-          )}
-          {leftTab === 'magias' && (
-            <CompactItemList
-              createPlaceholder="Nome da magia"
-              emptyLabel="Nenhuma magia ainda."
-              items={sheet.magiasUnificadas || []}
-              onChange={(items) => updateSheet({ ...sheet, magiasUnificadas: items })}
-            />
-          )}
+          <span className="eyebrow">Habilidades</span>
+          <CompactItemList
+            createPlaceholder="Nome da habilidade"
+            emptyLabel="Nenhuma habilidade ainda."
+            items={sheet.habilidades || []}
+            onChange={(items) => updateSheet({ ...sheet, habilidades: items })}
+          />
         </div>
 
         <div className="sheet-col sheet-col-center">
@@ -139,6 +114,10 @@ export default function CharacterSheet() {
           <TextLine label="Resistências" value={sheet.combatStats?.resistencias} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, resistencias: v } })} />
 
           <div style={{ marginTop: 30 }}>
+            <DiceRoller />
+          </div>
+
+          <div style={{ marginTop: 30 }}>
             <DeleteCharacter
               characterId={id}
               characterName={character.name}
@@ -148,7 +127,15 @@ export default function CharacterSheet() {
         </div>
 
         <div className="sheet-col sheet-col-right">
-          <InventoryGrid items={sheet.inventario || []} onChange={(items) => updateSheet({ ...sheet, inventario: items })} />
+          <TextLine label="Bônus Arcano" value={sheet.bonusArcano} onChange={(v) => updateSheet({ ...sheet, bonusArcano: v })} />
+          <TextLine label="DT Arcana" value={sheet.dtArcana} onChange={(v) => updateSheet({ ...sheet, dtArcana: v })} />
+          <span className="eyebrow">Magias</span>
+          <CompactItemList
+            createPlaceholder="Nome da magia"
+            emptyLabel="Nenhuma magia ainda."
+            items={sheet.magiasUnificadas || []}
+            onChange={(items) => updateSheet({ ...sheet, magiasUnificadas: items })}
+          />
         </div>
       </div>
 
@@ -164,8 +151,8 @@ export default function CharacterSheet() {
         />
       </SideDrawer>
 
-      <SideDrawer side="left" label="Rolagens">
-        <DiceRoller />
+      <SideDrawer side="left" label="Inventário">
+        <InventoryGrid items={sheet.inventario || []} onChange={(items) => updateSheet({ ...sheet, inventario: items })} />
       </SideDrawer>
     </div>
   )

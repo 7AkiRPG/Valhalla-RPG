@@ -755,12 +755,12 @@ label {
 }
 .ap-row-controls {
   display: flex;
-  justify-content: space-between;
-  width: 220px;
+  justify-content: center;
+  gap: 10px;
 }
 .ap-row-controls button {
-  padding: 2px 10px;
-  font-size: 0.75rem;
+  padding: 2px 12px;
+  font-size: 0.8rem;
 }
 .ap-row {
   display: flex;
@@ -769,6 +769,7 @@ label {
 }
 .ap-triangle {
   display: block;
+  cursor: pointer;
 }
 
 /* Recursos simplificados (círculo + linha de máximo) */

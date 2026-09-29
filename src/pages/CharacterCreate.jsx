@@ -24,10 +24,12 @@ export default function CharacterCreate() {
         magiasUnificadas: [],
         equipamento: [],
         combatStats: { aparar: '', bloquear: '', esquivar: '', resistencias: '' },
-        pontosAcao: { esquerda: 0, direita: 0 },
+        pontosAcao: { extra: 0, toggledOff: [] },
         pericias: {},
         inventario: [],
         anotacoes: '',
+        bonusArcano: '',
+        dtArcana: '',
         resources: {
           pv: { max: 0, current: 0, temp: 0 },
           pd: { max: 0, current: 0, temp: 0 },
