@@ -406,6 +406,16 @@ label {
   width: 0%;
   background: linear-gradient(90deg, var(--blood), #b5504c);
 }
+.temp-value span {
+  cursor: pointer;
+  border-bottom: 1px dotted rgba(255, 255, 255, 0.4);
+}
+.temp-edit-input {
+  width: 30px;
+  text-align: center;
+  padding: 0 2px;
+  font-size: 0.65rem;
+}
 .temp-value {
   position: relative;
   z-index: 1;
@@ -753,6 +763,18 @@ label {
   gap: 4px;
   margin-bottom: 20px;
 }
+.ap-refill {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 6px;
+}
 .ap-row-controls {
   display: flex;
   justify-content: center;
@@ -959,12 +981,62 @@ label {
   cursor: default;
 }
 .inventory-cell.occupied {
-  background: var(--gold);
-  opacity: 0.5;
-  cursor: pointer;
+  opacity: 0.75;
+  cursor: grab;
 }
 .inventory-cell.occupied:hover {
-  opacity: 0.8;
+  opacity: 1;
+}
+.inventory-cell.occupied:active {
+  cursor: grabbing;
+}
+
+.inventory-tray {
+  background: var(--bg-card);
+  border: 1px dashed var(--gold);
+  padding: 10px;
+  border-radius: 2px;
+}
+.tray-items {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.tray-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--bg-elevated);
+  border: 2px solid var(--gold);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 0.8rem;
+  cursor: grab;
+}
+.tray-item:active {
+  cursor: grabbing;
+}
+.tray-item-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.color-picker {
+  display: flex;
+  gap: 6px;
+  margin: 8px 0;
+}
+.color-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  padding: 0;
+}
+.color-swatch.selected {
+  border-color: var(--bone);
 }
 
 .shape-editor {

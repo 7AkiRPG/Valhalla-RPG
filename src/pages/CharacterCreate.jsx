@@ -31,9 +31,9 @@ export default function CharacterCreate() {
         bonusArcano: '',
         dtArcana: '',
         resources: {
-          pv: { max: 0, current: 0, temp: 0 },
-          pd: { max: 0, current: 0, temp: 0 },
-          pm: { max: 0, current: 0, temp: 0 },
+          pv: { max: 0, current: 0, temp: { current: 0, max: 0 } },
+          pd: { max: 0, current: 0, temp: { current: 0, max: 0 } },
+          pm: { max: 0, current: 0, temp: { current: 0, max: 0 } },
         },
       }
 

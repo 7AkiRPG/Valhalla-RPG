@@ -94,7 +94,7 @@ export default function CharacterSheet() {
 
         <div className="sheet-col sheet-col-center">
           <div className="header-name-row">
-            <LevelDial nivel={sheet.nivelAtual || 1} onChange={(n) => updateSheet({ ...sheet, nivelAtual: Math.max(1, n) })} />
+            <LevelDial nivel={sheet.nivelAtual ?? 1} onChange={(n) => updateSheet({ ...sheet, nivelAtual: Math.max(0, n) })} />
             <TextLine label="Nome" value={nameDraft} onChange={updateName} big />
           </div>
 

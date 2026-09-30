@@ -3,6 +3,7 @@ import { useState } from 'react'
 const COLS = 8
 const ROWS = 14
 const SHAPE_SIZE = 8
+const COLORS = ['#c9a24b', '#8c3230', '#4c9a5a', '#7a5ac9', '#3a6ea5', '#a5573a', '#8a8a8a', '#a53a8f']
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -25,33 +26,6 @@ function normalizeShape(grid) {
   return cells.map(([x, y]) => [x - minX, y - minY])
 }
 
-function buildOccupancy(items) {
-  const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null))
-  for (const item of items) {
-    for (const [dx, dy] of item.shape) {
-      const x = item.x + dx
-      const y = item.y + dy
-      if (x >= 0 && x < COLS && y >= 0 && y < ROWS) grid[y][x] = item.id
-    }
-  }
-  return grid
-}
-
-function findPlacement(items, shape) {
-  const grid = buildOccupancy(items)
-  for (let y = 0; y < ROWS; y++) {
-    for (let x = 0; x < COLS; x++) {
-      const fits = shape.every(([dx, dy]) => {
-        const px = x + dx
-        const py = y + dy
-        return px >= 0 && px < COLS && py >= 0 && py < ROWS && !grid[py][px]
-      })
-      if (fits) return { x, y }
-    }
-  }
-  return null
-}
-
 function shapeDimensions(grid) {
   const cells = []
   for (let y = 0; y < SHAPE_SIZE; y++) {
@@ -62,15 +36,37 @@ function shapeDimensions(grid) {
   if (cells.length === 0) return null
   const xs = cells.map((c) => c[0])
   const ys = cells.map((c) => c[1])
-  const width = Math.max(...xs) - Math.min(...xs) + 1
-  const height = Math.max(...ys) - Math.min(...ys) + 1
-  return { width, height }
+  return { width: Math.max(...xs) - Math.min(...xs) + 1, height: Math.max(...ys) - Math.min(...ys) + 1 }
+}
+
+function buildOccupancy(items, excludeId) {
+  const grid = Array.from({ length: ROWS }, () => Array(COLS).fill(null))
+  for (const item of items) {
+    if (item.id === excludeId) continue
+    if (item.x === null || item.y === null || item.x === undefined || item.y === undefined) continue
+    for (const [dx, dy] of item.shape) {
+      const x = item.x + dx
+      const y = item.y + dy
+      if (x >= 0 && x < COLS && y >= 0 && y < ROWS) grid[y][x] = item.id
+    }
+  }
+  return grid
+}
+
+function canPlace(items, shape, originX, originY, excludeId) {
+  const grid = buildOccupancy(items, excludeId)
+  return shape.every(([dx, dy]) => {
+    const x = originX + dx
+    const y = originY + dy
+    return x >= 0 && x < COLS && y >= 0 && y < ROWS && !grid[y][x]
+  })
 }
 
 export default function InventoryGrid({ items, onChange }) {
   const [creating, setCreating] = useState(false)
   const [newName, setNewName] = useState('')
   const [newDesc, setNewDesc] = useState('')
+  const [newColor, setNewColor] = useState(COLORS[0])
   const [shapeGrid, setShapeGrid] = useState(emptyShapeGrid())
   const [createError, setCreateError] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
@@ -87,6 +83,7 @@ export default function InventoryGrid({ items, onChange }) {
     if (!newName.trim()) return
     setCreating(true)
     setShapeGrid(emptyShapeGrid())
+    setNewColor(COLORS[0])
     setCreateError(null)
   }
 
@@ -96,19 +93,7 @@ export default function InventoryGrid({ items, onChange }) {
       setCreateError('Desenhe pelo menos um quadrado pra forma do item.')
       return
     }
-    const placement = findPlacement(items, shape)
-    if (!placement) {
-      setCreateError('Não há espaço no inventário pra essa forma.')
-      return
-    }
-    const item = {
-      id: makeId(),
-      nome: newName.trim(),
-      descricao: newDesc.trim(),
-      shape,
-      x: placement.x,
-      y: placement.y,
-    }
+    const item = { id: makeId(), nome: newName.trim(), descricao: newDesc.trim(), shape, x: null, y: null, color: newColor }
     onChange([...items, item])
     setCreating(false)
     setNewName('')
@@ -122,7 +107,33 @@ export default function InventoryGrid({ items, onChange }) {
     setSelectedItem(null)
   }
 
+  function unplaceItem(id) {
+    onChange(items.map((it) => (it.id === id ? { ...it, x: null, y: null } : it)))
+    setSelectedItem(null)
+  }
+
+  function updateItemColor(id, color) {
+    onChange(items.map((it) => (it.id === id ? { ...it, color } : it)))
+    setSelectedItem((s) => (s ? { ...s, color } : s))
+  }
+
+  function handleDragStart(e, id) {
+    e.dataTransfer.setData('text/plain', id)
+  }
+
+  function handleDrop(e, x, y) {
+    e.preventDefault()
+    const id = e.dataTransfer.getData('text/plain')
+    const item = items.find((it) => it.id === id)
+    if (!item) return
+    if (canPlace(items, item.shape, x, y, id)) {
+      onChange(items.map((it) => (it.id === id ? { ...it, x, y } : it)))
+    }
+  }
+
   const occupancy = buildOccupancy(items)
+  const unplaced = items.filter((it) => it.x === null || it.y === null || it.x === undefined || it.y === undefined)
+  const dims = shapeDimensions(shapeGrid)
 
   return (
     <div className="inventory-wrap">
@@ -151,16 +162,29 @@ export default function InventoryGrid({ items, onChange }) {
                 <div
                   key={`${x}-${y}`}
                   className={`shape-cell ${filled ? 'filled' : ''}`}
+                  style={filled ? { background: newColor } : undefined}
                   onClick={() => toggleShapeCell(x, y)}
                 />
               ))
             )}
           </div>
-          {shapeDimensions(shapeGrid) && (
+          {dims && (
             <p className="muted">
-              Espaço: {shapeDimensions(shapeGrid).width} × {shapeDimensions(shapeGrid).height}
+              Espaço: {dims.width} × {dims.height}
             </p>
           )}
+          <p className="muted">Cor do item:</p>
+          <div className="color-picker">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`color-swatch ${newColor === c ? 'selected' : ''}`}
+                style={{ background: c }}
+                onClick={() => setNewColor(c)}
+              />
+            ))}
+          </div>
           <div className="field">
             <label>Descrição</label>
             <textarea rows={3} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} />
@@ -177,15 +201,42 @@ export default function InventoryGrid({ items, onChange }) {
         </div>
       )}
 
+      {unplaced.length > 0 && (
+        <div className="inventory-tray">
+          <p className="muted">Arraste pra posicionar no grid:</p>
+          <div className="tray-items">
+            {unplaced.map((item) => (
+              <div
+                key={item.id}
+                className="tray-item"
+                style={{ borderColor: item.color }}
+                draggable
+                onDragStart={(e) => handleDragStart(e, item.id)}
+                onClick={() => setSelectedItem(item)}
+              >
+                <span className="tray-item-swatch" style={{ background: item.color }} />
+                {item.nome}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="inventory-grid">
         {Array.from({ length: ROWS }).map((_, y) =>
           Array.from({ length: COLS }).map((_, x) => {
             const itemId = occupancy[y][x]
+            const item = itemId ? items.find((it) => it.id === itemId) : null
             return (
               <div
                 key={`${x}-${y}`}
-                className={`inventory-cell ${itemId ? 'occupied' : ''}`}
-                onClick={() => itemId && setSelectedItem(items.find((it) => it.id === itemId))}
+                className={`inventory-cell ${item ? 'occupied' : ''}`}
+                style={item ? { background: item.color } : undefined}
+                draggable={!!item}
+                onDragStart={(e) => item && handleDragStart(e, item.id)}
+                onDragOver={(e) => e.preventDefault()}
+                onDrop={(e) => handleDrop(e, x, y)}
+                onClick={() => item && setSelectedItem(item)}
               />
             )
           })
@@ -196,7 +247,24 @@ export default function InventoryGrid({ items, onChange }) {
         <div className="pending-block">
           <h4>{selectedItem.nome}</h4>
           <p className="muted">{selectedItem.descricao || 'Sem descrição.'}</p>
-          <div style={{ display: 'flex', gap: 10 }}>
+          <p className="muted">Cor:</p>
+          <div className="color-picker">
+            {COLORS.map((c) => (
+              <button
+                key={c}
+                type="button"
+                className={`color-swatch ${selectedItem.color === c ? 'selected' : ''}`}
+                style={{ background: c }}
+                onClick={() => updateItemColor(selectedItem.id, c)}
+              />
+            ))}
+          </div>
+          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+            {selectedItem.x !== null && selectedItem.x !== undefined && (
+              <button className="ghost" onClick={() => unplaceItem(selectedItem.id)}>
+                Tirar do grid
+              </button>
+            )}
             <button className="ghost" onClick={() => removeItem(selectedItem.id)}>
               Remover item
             </button>

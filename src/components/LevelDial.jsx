@@ -8,7 +8,7 @@ export default function LevelDial({ nivel, onChange }) {
 
   function commit() {
     const n = parseInt(draft, 10)
-    if (!isNaN(n) && n >= 1) onChange(n)
+    if (!isNaN(n) && n >= 0) onChange(n)
     else setDraft(String(nivel))
     setEditing(false)
   }
@@ -43,7 +43,7 @@ export default function LevelDial({ nivel, onChange }) {
         </div>
       </div>
 
-      <button type="button" onClick={() => onChange(Math.max(1, nivel - 1))} aria-label="Descer nível">
+      <button type="button" onClick={() => onChange(Math.max(0, nivel - 1))} aria-label="Descer nível">
         −
       </button>
     </div>

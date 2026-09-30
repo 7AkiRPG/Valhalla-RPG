@@ -33,9 +33,17 @@ export function normalizeSheet(rawSheet) {
 
   if (!sheet.resources) {
     sheet.resources = {
-      pv: { max: sheet.derived?.pv || 0, current: sheet.derived?.pv || 0, temp: 0 },
-      pd: { max: sheet.derived?.pd || 0, current: sheet.derived?.pd || 0, temp: 0 },
-      pm: { max: sheet.derived?.pm || 0, current: sheet.derived?.pm || 0, temp: 0 },
+      pv: { max: sheet.derived?.pv || 0, current: sheet.derived?.pv || 0, temp: { current: 0, max: 0 } },
+      pd: { max: sheet.derived?.pd || 0, current: sheet.derived?.pd || 0, temp: { current: 0, max: 0 } },
+      pm: { max: sheet.derived?.pm || 0, current: sheet.derived?.pm || 0, temp: { current: 0, max: 0 } },
+    }
+  }
+  // Temporários: antes era um número único, agora é {current, max}
+  for (const key of ['pv', 'pd', 'pm']) {
+    const res = sheet.resources[key]
+    if (res && typeof res.temp !== 'object') {
+      const oldTemp = res.temp || 0
+      res.temp = { current: oldTemp, max: oldTemp }
     }
   }
 
@@ -148,6 +156,7 @@ export function normalizeSheet(rawSheet) {
   if (!Array.isArray(sheet.inventario)) {
     sheet.inventario = []
   }
+  sheet.inventario = sheet.inventario.map((it) => (it.color ? it : { ...it, color: '#c9a24b' }))
 
   if (typeof sheet.anotacoes !== 'string') {
     sheet.anotacoes = ''

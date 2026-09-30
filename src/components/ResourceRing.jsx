@@ -1,11 +1,16 @@
 import { useState } from 'react'
 
 export default function ResourceRing({ label, resource, onChange }) {
-  const { current, max, temp } = resource
+  const { current, max } = resource
+  const temp = resource.temp && typeof resource.temp === 'object' ? resource.temp : { current: resource.temp || 0, max: resource.temp || 0 }
   const [editingCurrent, setEditingCurrent] = useState(false)
   const [currentDraft, setCurrentDraft] = useState(current)
   const [editingMax, setEditingMax] = useState(false)
   const [maxDraft, setMaxDraft] = useState(max)
+  const [editingTempCurrent, setEditingTempCurrent] = useState(false)
+  const [tempCurrentDraft, setTempCurrentDraft] = useState(temp.current)
+  const [editingTempMax, setEditingTempMax] = useState(false)
+  const [tempMaxDraft, setTempMaxDraft] = useState(temp.max)
 
   const pct = max > 0 ? Math.max(0, Math.min(1, current / max)) : 0
   const r = 42
@@ -27,9 +32,24 @@ export default function ResourceRing({ label, resource, onChange }) {
     setEditingMax(false)
   }
 
-  function applyTemp(n) {
-    onChange({ ...resource, temp: Math.max(0, temp + n) })
+  function applyTempDelta(n) {
+    const next = Math.max(0, Math.min(temp.max, temp.current + n))
+    onChange({ ...resource, temp: { ...temp, current: next } })
   }
+
+  function commitTempCurrent() {
+    const n = parseInt(tempCurrentDraft, 10)
+    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { ...temp, current: Math.min(n, temp.max) } })
+    setEditingTempCurrent(false)
+  }
+
+  function commitTempMax() {
+    const n = parseInt(tempMaxDraft, 10)
+    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { current: Math.min(temp.current, n), max: n } })
+    setEditingTempMax(false)
+  }
+
+  const tempPct = temp.max > 0 ? Math.max(0, Math.min(1, temp.current / temp.max)) * 100 : 0
 
   return (
     <div className="resource">
@@ -94,14 +114,45 @@ export default function ResourceRing({ label, resource, onChange }) {
       <span className="label">{label}</span>
 
       <div className="temp-row">
-        <button type="button" onClick={() => applyTemp(-1)}>
+        <button type="button" onClick={() => applyTempDelta(-1)}>
           −
         </button>
         <div className="temp-track">
-          <div className="temp-fill" style={{ width: `${Math.min(100, temp * 10)}%` }} />
-          <span className="temp-value">{temp} temp.</span>
+          <div className="temp-fill" style={{ width: `${tempPct}%` }} />
+          <span className="temp-value">
+            {editingTempCurrent ? (
+              <input
+                className="temp-edit-input"
+                type="number"
+                autoFocus
+                value={tempCurrentDraft}
+                onChange={(e) => setTempCurrentDraft(e.target.value)}
+                onBlur={commitTempCurrent}
+                onKeyDown={(e) => e.key === 'Enter' && commitTempCurrent()}
+              />
+            ) : (
+              <span onClick={() => { setTempCurrentDraft(temp.current); setEditingTempCurrent(true) }}>
+                {temp.current}
+              </span>
+            )}
+            {' / '}
+            {editingTempMax ? (
+              <input
+                className="temp-edit-input"
+                type="number"
+                autoFocus
+                value={tempMaxDraft}
+                onChange={(e) => setTempMaxDraft(e.target.value)}
+                onBlur={commitTempMax}
+                onKeyDown={(e) => e.key === 'Enter' && commitTempMax()}
+              />
+            ) : (
+              <span onClick={() => { setTempMaxDraft(temp.max); setEditingTempMax(true) }}>{temp.max}</span>
+            )}
+            {' temp.'}
+          </span>
         </div>
-        <button type="button" onClick={() => applyTemp(1)}>
+        <button type="button" onClick={() => applyTempDelta(1)}>
           +
         </button>
       </div>

@@ -33,8 +33,16 @@ export default function ActionPoints({ pontosAcao, onChange }) {
     onChange({ ...pontosAcao, extra: newExtra, toggledOff: toggledOff.filter((k) => k !== removedKey) })
   }
 
+  function refillAll() {
+    onChange({ ...pontosAcao, toggledOff: [] })
+  }
+
   return (
     <div className="ap-track">
+      <button type="button" className="ap-refill" onClick={refillAll} title="Preencher todos os pontos de ação">
+        ⟳
+      </button>
+
       <div className="ap-row">
         {Array.from({ length: extra }).map((_, i) => {
           const key = `green-${i}`
