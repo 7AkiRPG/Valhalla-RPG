@@ -70,6 +70,8 @@ export default function InventoryGrid({ items, onChange }) {
   const [shapeGrid, setShapeGrid] = useState(emptyShapeGrid())
   const [createError, setCreateError] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [dragInfo, setDragInfo] = useState(null) // { id, grabDx, grabDy }
+  const [hoverCell, setHoverCell] = useState(null) // { x, y }
 
   function toggleShapeCell(x, y) {
     setShapeGrid((prev) => {
@@ -117,18 +119,54 @@ export default function InventoryGrid({ items, onChange }) {
     setSelectedItem((s) => (s ? { ...s, color } : s))
   }
 
-  function handleDragStart(e, id) {
+  // grabDx/grabDy = qual célula da peça (relativa ao canto dela) foi
+  // "pega" — assim a peça inteira se move junto, mantendo a célula clicada
+  // debaixo do cursor, em vez de sempre ancorar pelo canto.
+  function handleDragStart(e, id, grabDx = 0, grabDy = 0) {
     e.dataTransfer.setData('text/plain', id)
+    e.dataTransfer.effectAllowed = 'move'
+    setDragInfo({ id, grabDx, grabDy })
+  }
+
+  function handleDragEnd() {
+    setDragInfo(null)
+    setHoverCell(null)
+  }
+
+  function handleCellDragOver(e, x, y) {
+    e.preventDefault()
+    setHoverCell({ x, y })
   }
 
   function handleDrop(e, x, y) {
     e.preventDefault()
-    const id = e.dataTransfer.getData('text/plain')
-    const item = items.find((it) => it.id === id)
+    if (!dragInfo) return
+    const item = items.find((it) => it.id === dragInfo.id)
     if (!item) return
-    if (canPlace(items, item.shape, x, y, id)) {
-      onChange(items.map((it) => (it.id === id ? { ...it, x, y } : it)))
+    const originX = x - dragInfo.grabDx
+    const originY = y - dragInfo.grabDy
+    if (canPlace(items, item.shape, originX, originY, item.id)) {
+      onChange(items.map((it) => (it.id === item.id ? { ...it, x: originX, y: originY } : it)))
     }
+    setDragInfo(null)
+    setHoverCell(null)
+  }
+
+  // Calcula quais células a peça arrastada ocuparia se solta agora, e se
+  // esse lugar é válido — pra desenhar a prévia na grade.
+  let previewCells = []
+  let previewValid = false
+  if (dragInfo && hoverCell) {
+    const draggedItem = items.find((it) => it.id === dragInfo.id)
+    if (draggedItem) {
+      const originX = hoverCell.x - dragInfo.grabDx
+      const originY = hoverCell.y - dragInfo.grabDy
+      previewCells = draggedItem.shape.map(([dx, dy]) => [originX + dx, originY + dy])
+      previewValid = canPlace(items, draggedItem.shape, originX, originY, draggedItem.id)
+    }
+  }
+  function isPreviewCell(x, y) {
+    return previewCells.some(([px, py]) => px === x && py === y)
   }
 
   const occupancy = buildOccupancy(items)
@@ -211,7 +249,8 @@ export default function InventoryGrid({ items, onChange }) {
                 className="tray-item"
                 style={{ borderColor: item.color }}
                 draggable
-                onDragStart={(e) => handleDragStart(e, item.id)}
+                onDragStart={(e) => handleDragStart(e, item.id, 0, 0)}
+                onDragEnd={handleDragEnd}
                 onClick={() => setSelectedItem(item)}
               >
                 <span className="tray-item-swatch" style={{ background: item.color }} />
@@ -222,19 +261,28 @@ export default function InventoryGrid({ items, onChange }) {
         </div>
       )}
 
-      <div className="inventory-grid">
+      <div className="inventory-grid" onDragLeave={() => setHoverCell(null)}>
         {Array.from({ length: ROWS }).map((_, y) =>
           Array.from({ length: COLS }).map((_, x) => {
             const itemId = occupancy[y][x]
             const item = itemId ? items.find((it) => it.id === itemId) : null
+            const preview = isPreviewCell(x, y)
+            const cellClass = [
+              'inventory-cell',
+              item ? 'occupied' : '',
+              preview ? (previewValid ? 'preview-valid' : 'preview-invalid') : '',
+            ]
+              .filter(Boolean)
+              .join(' ')
             return (
               <div
                 key={`${x}-${y}`}
-                className={`inventory-cell ${item ? 'occupied' : ''}`}
-                style={item ? { background: item.color } : undefined}
+                className={cellClass}
+                style={item && !preview ? { background: item.color } : undefined}
                 draggable={!!item}
-                onDragStart={(e) => item && handleDragStart(e, item.id)}
-                onDragOver={(e) => e.preventDefault()}
+                onDragStart={(e) => item && handleDragStart(e, item.id, x - item.x, y - item.y)}
+                onDragEnd={handleDragEnd}
+                onDragOver={(e) => handleCellDragOver(e, x, y)}
                 onDrop={(e) => handleDrop(e, x, y)}
                 onClick={() => item && setSelectedItem(item)}
               />

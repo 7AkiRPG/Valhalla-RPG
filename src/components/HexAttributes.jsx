@@ -57,7 +57,26 @@ function AttrBadge({ label, value, onChange }) {
   )
 }
 
+// Escala do gráfico: acompanha o maior atributo atual, com um piso de 10
+// pra personagens com valores baixos não ficarem todos "no talo".
+function radarScale(atributos) {
+  const values = ATTRS.map((a) => atributos?.[a.key] || 0)
+  return Math.max(10, ...values)
+}
+
+function radarPoints(cx, cy, maxRadius, atributos, scaleMax) {
+  return ATTRS.map((a, i) => {
+    const angle = (Math.PI / 180) * (60 * i - 90)
+    const value = Math.max(0, atributos?.[a.key] || 0)
+    const frac = Math.min(1, value / scaleMax)
+    const r = frac * maxRadius
+    return `${cx + r * Math.cos(angle)},${cy + r * Math.sin(angle)}`
+  }).join(' ')
+}
+
 export default function HexAttributes({ atributos, onChange }) {
+  const scaleMax = radarScale(atributos)
+
   return (
     <div className="hex-wrap">
       <svg viewBox="0 0 200 200" className="hex-svg">
@@ -68,6 +87,7 @@ export default function HexAttributes({ atributos, onChange }) {
             className="hex-ring"
           />
         ))}
+        <polygon points={radarPoints(100, 100, 86, atributos, scaleMax)} className="hex-radar" />
       </svg>
       {ATTRS.map((a, i) => {
         const pos = posForAngle(ANGLES[i], 118)

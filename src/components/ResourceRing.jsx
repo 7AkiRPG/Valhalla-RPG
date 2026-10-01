@@ -33,19 +33,18 @@ export default function ResourceRing({ label, resource, onChange }) {
   }
 
   function applyTempDelta(n) {
-    const next = Math.max(0, Math.min(temp.max, temp.current + n))
-    onChange({ ...resource, temp: { ...temp, current: next } })
+    onChange({ ...resource, temp: { ...temp, current: Math.max(0, temp.current + n) } })
   }
 
   function commitTempCurrent() {
     const n = parseInt(tempCurrentDraft, 10)
-    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { ...temp, current: Math.min(n, temp.max) } })
+    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { ...temp, current: n } })
     setEditingTempCurrent(false)
   }
 
   function commitTempMax() {
     const n = parseInt(tempMaxDraft, 10)
-    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { current: Math.min(temp.current, n), max: n } })
+    if (!isNaN(n) && n >= 0) onChange({ ...resource, temp: { ...temp, max: n } })
     setEditingTempMax(false)
   }
 

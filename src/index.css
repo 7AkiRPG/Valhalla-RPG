@@ -165,6 +165,18 @@ button:disabled {
   cursor: not-allowed;
 }
 
+/* Remove as setas nativas de incremento/decremento dos campos numéricos —
+   já temos botões próprios de +/- na maioria dos lugares */
+input[type='number']::-webkit-inner-spin-button,
+input[type='number']::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type='number'] {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+
 input,
 select,
 textarea {
@@ -723,6 +735,13 @@ label {
   stroke-width: 1;
   opacity: 0.6;
 }
+.hex-radar {
+  fill: rgba(201, 162, 75, 0.28);
+  stroke: var(--gold-bright);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  transition: all 0.2s ease;
+}
 .hex-attr-pos {
   position: absolute;
   transform: translate(-50%, -50%);
@@ -989,6 +1008,16 @@ label {
 }
 .inventory-cell.occupied:active {
   cursor: grabbing;
+}
+.inventory-cell.preview-valid {
+  background: rgba(76, 154, 90, 0.55) !important;
+  outline: 1px solid #4c9a5a;
+  outline-offset: -1px;
+}
+.inventory-cell.preview-invalid {
+  background: rgba(140, 50, 48, 0.55) !important;
+  outline: 1px solid var(--blood);
+  outline-offset: -1px;
 }
 
 .inventory-tray {
