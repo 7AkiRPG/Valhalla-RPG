@@ -12,6 +12,7 @@ import TextLine from '../components/TextLine.jsx'
 import PericiasDrawer from '../components/PericiasDrawer.jsx'
 import SideDrawer from '../components/SideDrawer.jsx'
 import InventoryGrid from '../components/InventoryGrid.jsx'
+import RichTextEditor from '../components/RichTextEditor.jsx'
 import { normalizeSheet } from '../lib/characterMigration.js'
 
 export default function CharacterSheet() {
@@ -143,11 +144,11 @@ export default function CharacterSheet() {
 
       <SideDrawer side="right" label="Anotações">
         <h2>Anotações</h2>
-        <textarea
-          rows={20}
-          value={sheet.anotacoes || ''}
-          onChange={(e) => updateSheet({ ...sheet, anotacoes: e.target.value })}
+        <RichTextEditor
+          initialValue={sheet.anotacoes}
+          onChange={(html) => updateSheet({ ...sheet, anotacoes: html })}
           placeholder="Anote o que quiser sobre a jornada do seu campeão..."
+          rows={20}
         />
       </SideDrawer>
 

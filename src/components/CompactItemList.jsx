@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import RichTextEditor from './RichTextEditor.jsx'
 
 function makeId() {
   return Math.random().toString(36).slice(2, 10)
@@ -86,10 +87,11 @@ export default function CompactItemList({ items, onChange, createPlaceholder = '
             </div>
             <div className="field">
               <label>Descrição</label>
-              <textarea
+              <RichTextEditor
+                key={selected.id}
+                initialValue={selected.descricao}
+                onChange={(html) => updateItem(selected.id, { descricao: html })}
                 rows={10}
-                value={selected.descricao}
-                onChange={(e) => updateItem(selected.id, { descricao: e.target.value })}
               />
             </div>
           </div>
