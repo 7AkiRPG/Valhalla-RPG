@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import RichTextEditor from './RichTextEditor.jsx'
+import Modal from './Modal.jsx'
 
 const COLS = 8
 const ROWS = 14
@@ -70,7 +71,7 @@ export default function InventoryGrid({ items, onChange }) {
   const [newColor, setNewColor] = useState(COLORS[0])
   const [shapeGrid, setShapeGrid] = useState(emptyShapeGrid())
   const [createError, setCreateError] = useState(null)
-  const [selectedItem, setSelectedItem] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
   const [dragInfo, setDragInfo] = useState(null) // { id, grabDx, grabDy }
   const [hoverCell, setHoverCell] = useState(null) // { x, y }
 
@@ -107,17 +108,16 @@ export default function InventoryGrid({ items, onChange }) {
 
   function removeItem(id) {
     onChange(items.filter((it) => it.id !== id))
-    setSelectedItem(null)
+    setSelectedId(null)
   }
 
   function unplaceItem(id) {
     onChange(items.map((it) => (it.id === id ? { ...it, x: null, y: null } : it)))
-    setSelectedItem(null)
+    setSelectedId(null)
   }
 
-  function updateItemColor(id, color) {
-    onChange(items.map((it) => (it.id === id ? { ...it, color } : it)))
-    setSelectedItem((s) => (s ? { ...s, color } : s))
+  function updateItem(id, patch) {
+    onChange(items.map((it) => (it.id === id ? { ...it, ...patch } : it)))
   }
 
   // grabDx/grabDy = qual célula da peça (relativa ao canto dela) foi
@@ -170,6 +170,7 @@ export default function InventoryGrid({ items, onChange }) {
     return previewCells.some(([px, py]) => px === x && py === y)
   }
 
+  const selectedItem = items.find((it) => it.id === selectedId) || null
   const occupancy = buildOccupancy(items)
   const unplaced = items.filter((it) => it.x === null || it.y === null || it.x === undefined || it.y === undefined)
   const dims = shapeDimensions(shapeGrid)
@@ -193,7 +194,12 @@ export default function InventoryGrid({ items, onChange }) {
       )}
 
       {creating && (
-        <div className="shape-editor">
+        <Modal onClose={() => { setCreating(false); setCreateError(null); setNewDesc('') }} closeOnBackdrop={false}>
+          <h3>Novo item</h3>
+          <div className="field">
+            <label>Nome</label>
+            <input value={newName} onChange={(e) => setNewName(e.target.value)} />
+          </div>
           <p className="muted">Clique nos quadrados pra desenhar a forma do item.</p>
           <div className="shape-grid">
             {shapeGrid.map((row, y) =>
@@ -226,7 +232,7 @@ export default function InventoryGrid({ items, onChange }) {
           </div>
           <div className="field">
             <label>Descrição</label>
-            <RichTextEditor key={creating ? 'creating' : 'idle'} initialValue={newDesc} onChange={setNewDesc} rows={3} />
+            <RichTextEditor initialValue={newDesc} onChange={setNewDesc} rows={5} />
           </div>
           {createError && <p style={{ color: 'var(--blood)' }}>{createError}</p>}
           <div style={{ display: 'flex', gap: 10 }}>
@@ -237,7 +243,7 @@ export default function InventoryGrid({ items, onChange }) {
               Cancelar
             </button>
           </div>
-        </div>
+        </Modal>
       )}
 
       {unplaced.length > 0 && (
@@ -252,7 +258,7 @@ export default function InventoryGrid({ items, onChange }) {
                 draggable
                 onDragStart={(e) => handleDragStart(e, item.id, 0, 0)}
                 onDragEnd={handleDragEnd}
-                onClick={() => setSelectedItem(item)}
+                onClick={() => setSelectedId(item.id)}
               >
                 <span className="tray-item-swatch" style={{ background: item.color }} />
                 {item.nome}
@@ -285,7 +291,7 @@ export default function InventoryGrid({ items, onChange }) {
                 onDragEnd={handleDragEnd}
                 onDragOver={(e) => handleCellDragOver(e, x, y)}
                 onDrop={(e) => handleDrop(e, x, y)}
-                onClick={() => item && setSelectedItem(item)}
+                onClick={() => item && setSelectedId(item.id)}
               />
             )
           })
@@ -293,13 +299,24 @@ export default function InventoryGrid({ items, onChange }) {
       </div>
 
       {selectedItem && (
-        <div className="pending-block">
-          <h4>{selectedItem.nome}</h4>
-          {selectedItem.descricao ? (
-            <p className="muted" dangerouslySetInnerHTML={{ __html: selectedItem.descricao }} />
-          ) : (
-            <p className="muted">Sem descrição.</p>
-          )}
+        <Modal onClose={() => setSelectedId(null)}>
+          <div className="field">
+            <label>Nome</label>
+            <input
+              className="modal-name-input"
+              value={selectedItem.nome}
+              onChange={(e) => updateItem(selectedItem.id, { nome: e.target.value })}
+            />
+          </div>
+          <div className="field">
+            <label>Descrição</label>
+            <RichTextEditor
+              key={selectedItem.id}
+              initialValue={selectedItem.descricao}
+              onChange={(html) => updateItem(selectedItem.id, { descricao: html })}
+              rows={8}
+            />
+          </div>
           <p className="muted">Cor:</p>
           <div className="color-picker">
             {COLORS.map((c) => (
@@ -308,11 +325,11 @@ export default function InventoryGrid({ items, onChange }) {
                 type="button"
                 className={`color-swatch ${selectedItem.color === c ? 'selected' : ''}`}
                 style={{ background: c }}
-                onClick={() => updateItemColor(selectedItem.id, c)}
+                onClick={() => updateItem(selectedItem.id, { color: c })}
               />
             ))}
           </div>
-          <div style={{ display: 'flex', gap: 10, marginTop: 10 }}>
+          <div style={{ display: 'flex', gap: 10, marginTop: 14, flexWrap: 'wrap' }}>
             {selectedItem.x !== null && selectedItem.x !== undefined && (
               <button className="ghost" onClick={() => unplaceItem(selectedItem.id)}>
                 Tirar do grid
@@ -321,12 +338,10 @@ export default function InventoryGrid({ items, onChange }) {
             <button className="ghost" onClick={() => removeItem(selectedItem.id)}>
               Remover item
             </button>
-            <button className="ghost" onClick={() => setSelectedItem(null)}>
-              Fechar
-            </button>
           </div>
-        </div>
+        </Modal>
       )}
+
     </div>
   )
 }

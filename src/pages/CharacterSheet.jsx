@@ -114,11 +114,11 @@ export default function CharacterSheet() {
           <TextLine label="Esquivar" value={sheet.combatStats?.esquivar} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, esquivar: v } })} />
           <TextLine label="Resistências" value={sheet.combatStats?.resistencias} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, resistencias: v } })} />
 
-          <div style={{ marginTop: 30 }}>
+          <div className="sheet-dice" style={{ marginTop: 30 }}>
             <DiceRoller />
           </div>
 
-          <div style={{ marginTop: 30 }}>
+          <div className="sheet-delete" style={{ marginTop: 30 }}>
             <DeleteCharacter
               characterId={id}
               characterName={character.name}

@@ -929,14 +929,14 @@ label {
   top: 0;
   right: 0;
   bottom: 0;
-  width: min(420px, 90vw);
+  width: min(560px, 95vw);
   transform: translateX(100%);
 }
 .drawer-panel-left {
   top: 0;
   left: 0;
   bottom: 0;
-  width: min(420px, 90vw);
+  width: min(560px, 95vw);
   transform: translateX(-100%);
 }
 .drawer-open {
@@ -989,7 +989,8 @@ label {
 }
 .inventory-grid {
   display: grid;
-  grid-template-columns: repeat(8, 1fr);
+  grid-template-columns: repeat(8, minmax(0, 42px));
+  justify-content: center;
   gap: 3px;
 }
 .inventory-cell {
@@ -1076,13 +1077,13 @@ label {
 }
 .shape-grid {
   display: grid;
-  grid-template-columns: repeat(8, 26px);
+  grid-template-columns: repeat(8, minmax(0, 32px));
   gap: 3px;
   margin: 10px 0;
 }
 .shape-cell {
-  width: 26px;
-  height: 26px;
+  width: 100%;
+  aspect-ratio: 1;
   background: var(--bg-elevated);
   border: 1px solid var(--line);
   cursor: pointer;
@@ -1218,4 +1219,72 @@ label {
 .rich-text-editor strong {
   color: var(--blood);
   font-weight: 700;
+}
+
+/* Texto dos editores: uma fonte e um tamanho só, venha de onde vier */
+.rich-text-editor *,
+.rich-text-display * {
+  font-family: inherit !important;
+  font-size: inherit !important;
+  line-height: inherit !important;
+  background: none !important;
+}
+.rich-text-editor *:not(b):not(strong),
+.rich-text-display *:not(b):not(strong) {
+  color: inherit !important;
+  font-weight: inherit !important;
+}
+.rich-text-editor b,
+.rich-text-editor strong,
+.rich-text-display b,
+.rich-text-display strong {
+  color: var(--blood) !important;
+  font-weight: 700 !important;
+}
+.rich-text-display {
+  white-space: pre-wrap;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+}
+
+/* Espaços da ficha: mais largura no computador */
+.app-shell:has(.sheet-shell) {
+  max-width: 1400px;
+}
+.sheet-columns {
+  grid-template-columns: minmax(240px, 1fr) minmax(0, 2fr) minmax(240px, 1fr);
+}
+@media (max-width: 900px) {
+  .sheet-columns {
+    grid-template-columns: 1fr;
+  }
+}
+.modal-box {
+  width: min(640px, 100%);
+}
+
+/* Celular: primeiro nome/nível/atributos/pontos, depois habilidades,
+   depois magias, e por último rolador de dados e exclusão. */
+@media (max-width: 900px) {
+  .sheet-columns {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+  .sheet-col-center {
+    display: contents;
+  }
+  .sheet-col-left {
+    order: 10;
+    margin-top: 24px;
+  }
+  .sheet-col-right {
+    order: 11;
+    margin-top: 24px;
+  }
+  .sheet-dice {
+    order: 20;
+  }
+  .sheet-delete {
+    order: 21;
+  }
 }
