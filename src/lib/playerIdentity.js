@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js'
+import { formatCode } from './accessCode.js'
 
 const CACHE_KEY = 'valhalla_player_cache'
 
@@ -58,7 +59,7 @@ export async function recoverAccess(code) {
       Authorization: `Bearer ${accessToken}`,
       apikey: import.meta.env.VITE_SUPABASE_ANON_KEY,
     },
-    body: JSON.stringify({ code }),
+    body: JSON.stringify({ code: formatCode(code) }),
   })
 
   const body = await res.json()

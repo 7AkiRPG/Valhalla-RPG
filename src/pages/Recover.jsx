@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { recoverAccess } from '../lib/playerIdentity.js'
 import { usePlayer } from '../lib/PlayerContext.jsx'
+import { formatCodeInput } from '../lib/accessCode.js'
 
 export default function Recover() {
   const [code, setCode] = useState('')
@@ -38,7 +39,7 @@ export default function Recover() {
           <label>Código de recuperação</label>
           <input
             value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
+            onChange={(e) => setCode(formatCodeInput(e.target.value))}
             placeholder="XXXX-XXXX"
             required
           />

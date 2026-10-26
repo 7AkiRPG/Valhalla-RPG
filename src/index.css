@@ -1288,3 +1288,59 @@ label {
     order: 21;
   }
 }
+
+/* Cartões de personagem (biblioteca e campanha) com lixeira / ações */
+.character-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.character-card-link {
+  display: block;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  padding-right: 34px;
+}
+.character-card-link:hover h3,
+.character-card-link:hover h4 {
+  color: var(--bone);
+}
+.trash-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-color: var(--line);
+  color: var(--ash);
+}
+.trash-btn:hover {
+  background: var(--blood);
+  border-color: var(--blood);
+  color: #fff;
+}
+.small-action {
+  align-self: flex-start;
+  padding: 6px 12px;
+  font-size: 0.72rem;
+}
+
+/* Código da ficha no cartão da biblioteca */
+.sheet-code-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.sheet-code {
+  font-family: var(--font-display);
+  letter-spacing: 0.12em;
+  color: var(--gold-bright);
+  font-size: 1rem;
+}

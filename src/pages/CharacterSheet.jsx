@@ -1,9 +1,8 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useParams } from 'react-router-dom'
 import { supabase } from '../lib/supabaseClient.js'
 import DiceRoller from '../components/DiceRoller.jsx'
 import LevelDial from '../components/LevelDial.jsx'
-import DeleteCharacter from '../components/DeleteCharacter.jsx'
 import CompactItemList from '../components/CompactItemList.jsx'
 import HexAttributes from '../components/HexAttributes.jsx'
 import ActionPoints from '../components/ActionPoints.jsx'
@@ -13,11 +12,12 @@ import PericiasDrawer from '../components/PericiasDrawer.jsx'
 import SideDrawer from '../components/SideDrawer.jsx'
 import InventoryGrid from '../components/InventoryGrid.jsx'
 import RichTextEditor from '../components/RichTextEditor.jsx'
+import { usePlayer } from '../lib/PlayerContext.jsx'
 import { normalizeSheet } from '../lib/characterMigration.js'
 
 export default function CharacterSheet() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const { identity } = usePlayer()
   const [character, setCharacter] = useState(null)
   const [sheet, setSheet] = useState(null)
   const [nameDraft, setNameDraft] = useState('')
@@ -32,8 +32,13 @@ export default function CharacterSheet() {
       setLoading(true)
       const { data, error } = await supabase.from('characters').select('*').eq('id', id).single()
       if (cancelled) return
-      if (error) setError(error.message)
-      else {
+      if (error) {
+        setError(
+          error.code === 'PGRST116'
+            ? 'Você não tem acesso a esta ficha. Abra pela campanha e digite o código do site do dono.'
+            : error.message
+        )
+      } else {
         setCharacter(data)
         setSheet(normalizeSheet(data.sheet || {}))
         setNameDraft(data.name || '')
@@ -58,10 +63,11 @@ export default function CharacterSheet() {
 
   async function handleSave() {
     setSaving(true)
-    const { error } = await supabase
-      .from('characters')
-      .update({ sheet, name: nameDraft.trim() || character.name, updated_at: new Date().toISOString() })
-      .eq('id', id)
+    const { error } = await supabase.rpc('save_character_sheet', {
+      p_character_id: id,
+      p_name: nameDraft,
+      p_sheet: sheet,
+    })
     setSaving(false)
     if (error) setError(error.message)
     else {
@@ -71,11 +77,24 @@ export default function CharacterSheet() {
   }
 
   if (loading) return <div className="card muted">Consultando os pergaminhos...</div>
-  if (error) return <div className="card">Erro: {error}</div>
+  if (error)
+    return (
+      <div className="card">
+        <p>{error}</p>
+        <Link className="btn" to="/campanhas">
+          Voltar às campanhas
+        </Link>
+      </div>
+    )
   if (!character || !sheet) return null
 
   return (
     <div className="sheet-shell">
+      {character.player_id !== identity?.playerId && (
+        <p className="muted" style={{ textAlign: 'center' }}>
+          Você está editando a ficha de outro jogador.
+        </p>
+      )}
       <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
         <button className="primary" onClick={handleSave} disabled={!dirty || saving}>
           {saving ? 'Salvando...' : dirty ? 'Salvar alterações' : 'Tudo salvo'}
@@ -118,13 +137,6 @@ export default function CharacterSheet() {
             <DiceRoller />
           </div>
 
-          <div className="sheet-delete" style={{ marginTop: 30 }}>
-            <DeleteCharacter
-              characterId={id}
-              characterName={character.name}
-              onDeleted={() => navigate('/biblioteca')}
-            />
-          </div>
         </div>
 
         <div className="sheet-col sheet-col-right">

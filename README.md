@@ -106,3 +106,8 @@ supabase/
 - Edição de personagem após a criação (hoje só existe visualização + criação)
 - Progressão de nível (ganhar atributos, caminhos, magias e ascensões automaticamente)
 - Tela de combate com PV/PD/PM editáveis em tempo real
+
+## Segurança (exclusão com código, fichas na campanha)
+
+Depois do passo 1 acima, rode também `supabase/02-seguranca.sql` no SQL Editor do Supabase
+(New query > cole o arquivo inteiro > Run). Ele pode ser rodado mais de uma vez.
