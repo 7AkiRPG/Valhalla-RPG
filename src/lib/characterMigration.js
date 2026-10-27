@@ -13,15 +13,23 @@ function makeId() {
 export function normalizeSheet(rawSheet) {
   const sheet = { ...rawSheet }
 
-  // Atributos: agora são 6 (Corpo, Mente, Alma, Rituais, Selos, Sigilos)
+  // Atributos: Corpo, Mente, Alma, Núcleo e Assimilação
   const oldAtributos = sheet.atributos || {}
   sheet.atributos = {
     corpo: oldAtributos.corpo || 0,
     mente: oldAtributos.mente || 0,
     alma: oldAtributos.alma || 0,
-    rituais: oldAtributos.rituais || 0,
-    selos: oldAtributos.selos || 0,
-    sigilos: oldAtributos.sigilos || 0,
+    nucleo: oldAtributos.nucleo || 0,
+    assimilacao: oldAtributos.assimilacao || 0,
+  }
+  // Rituais, Selos e Sigilos deixaram de existir na ficha. Se algum tinha
+  // valor, guarda de lado (sem aparecer em lugar nenhum) pra não perder dado.
+  const legacyAtributos = {}
+  for (const k of ['rituais', 'selos', 'sigilos']) {
+    if (oldAtributos[k]) legacyAtributos[k] = oldAtributos[k]
+  }
+  if (Object.keys(legacyAtributos).length > 0 && !sheet.atributosAntigos) {
+    sheet.atributosAntigos = legacyAtributos
   }
 
   // Nível: antes era um valor único, agora são dois (Atual e Total)
