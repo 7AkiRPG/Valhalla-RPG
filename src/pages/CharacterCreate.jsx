@@ -19,7 +19,11 @@ export default function CharacterCreate() {
       const sheet = {
         nivelAtual: 1,
         nivelTotal: 1,
+<<<<<<< HEAD
         atributos: { corpo: 0, mente: 0, alma: 0, nucleo: 0, assimilacao: 0 },
+=======
+        atributos: { corpo: 0, mente: 0, alma: 0, nucleo: 0 },
+>>>>>>> b5ae144 (Ajustes na ficha)
         habilidades: [],
         magiasUnificadas: [],
         equipamento: [],

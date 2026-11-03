@@ -13,13 +13,18 @@ function makeId() {
 export function normalizeSheet(rawSheet) {
   const sheet = { ...rawSheet }
 
+<<<<<<< HEAD
   // Atributos: Corpo, Mente, Alma, Núcleo e Assimilação
+=======
+  // Atributos: Corpo, Mente, Alma e Núcleo
+>>>>>>> b5ae144 (Ajustes na ficha)
   const oldAtributos = sheet.atributos || {}
   sheet.atributos = {
     corpo: oldAtributos.corpo || 0,
     mente: oldAtributos.mente || 0,
     alma: oldAtributos.alma || 0,
     nucleo: oldAtributos.nucleo || 0,
+<<<<<<< HEAD
     assimilacao: oldAtributos.assimilacao || 0,
   }
   // Rituais, Selos e Sigilos deixaram de existir na ficha. Se algum tinha
@@ -30,7 +35,17 @@ export function normalizeSheet(rawSheet) {
   }
   if (Object.keys(legacyAtributos).length > 0 && !sheet.atributosAntigos) {
     sheet.atributosAntigos = legacyAtributos
+=======
+>>>>>>> b5ae144 (Ajustes na ficha)
   }
+  // Rituais, Selos, Sigilos e Assimilação deixaram de existir na ficha. Se
+  // algum tinha valor, guarda de lado (sem aparecer em lugar nenhum) pra não
+  // perder dado. Roda quantas vezes precisar: não sobrescreve o que já guardou.
+  const guardados = { ...(sheet.atributosAntigos || {}) }
+  for (const k of ['rituais', 'selos', 'sigilos', 'assimilacao']) {
+    if (oldAtributos[k] && guardados[k] === undefined) guardados[k] = oldAtributos[k]
+  }
+  if (Object.keys(guardados).length > 0) sheet.atributosAntigos = guardados
 
   // Nível: antes era um valor único, agora são dois (Atual e Total)
   if (sheet.nivelAtual === undefined || sheet.nivelTotal === undefined) {

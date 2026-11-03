@@ -1,13 +1,22 @@
 import { useState } from 'react'
 
+<<<<<<< HEAD
 // Gráfico de atributos: um polígono com tantos lados quanto atributos
 // (hoje 5 = pentágono). Pra mudar a lista, é só editar ATTRS.
+=======
+// Gráfico de atributos: um polígono com tantos lados quanto atributos, com a
+// primeira ponta pra cima (hoje 4 = quadrado de ponta pra cima, o losango).
+// Pra mudar a lista, é só editar ATTRS: o desenho se ajusta sozinho.
+>>>>>>> b5ae144 (Ajustes na ficha)
 const ATTRS = [
   { key: 'corpo', label: 'Corpo' },
   { key: 'mente', label: 'Mente' },
   { key: 'alma', label: 'Alma' },
   { key: 'nucleo', label: 'Núcleo' },
+<<<<<<< HEAD
   { key: 'assimilacao', label: 'Assimilação' },
+=======
+>>>>>>> b5ae144 (Ajustes na ficha)
 ]
 
 const SIDES = ATTRS.length
@@ -15,9 +24,17 @@ const STEP = 360 / SIDES
 // Posições ao redor do polígono (ângulos partindo do topo, sentido horário)
 const ANGLES = ATTRS.map((_, i) => -90 + STEP * i)
 
+<<<<<<< HEAD
 // O pentágono tem ponta em cima e base achatada: desce o centro um pouco
 // pra figura ficar centralizada na caixa (200x200 no SVG, 260px na tela).
 const CENTER_Y = 108
+=======
+// Alguns polígonos (como o pentágono) ficam mais altos de um lado que do
+// outro. Calcula o quanto deslocar o centro pra figura ficar centralizada na
+// caixa (200x200 no SVG, 260px na tela). No losango o deslocamento é zero.
+const SINES = ANGLES.map((deg) => Math.sin((deg * Math.PI) / 180))
+const CENTER_Y = 100 - (86 * (Math.min(...SINES) + Math.max(...SINES))) / 2
+>>>>>>> b5ae144 (Ajustes na ficha)
 const LABEL_SHIFT_PX = (CENTER_Y - 100) * (260 / 200)
 
 function posForAngle(deg, radius) {
