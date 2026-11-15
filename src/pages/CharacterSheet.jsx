@@ -1,0 +1,178 @@
+import { useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { supabase } from '../lib/supabaseClient.js'
+import DiceRoller from '../components/DiceRoller.jsx'
+import LevelDial from '../components/LevelDial.jsx'
+import CompactItemList from '../components/CompactItemList.jsx'
+import HexAttributes from '../components/HexAttributes.jsx'
+import AssimilationStars from '../components/AssimilationStars.jsx'
+import ActionPoints from '../components/ActionPoints.jsx'
+import ResourceRing from '../components/ResourceRing.jsx'
+import TextLine from '../components/TextLine.jsx'
+import PericiasDrawer from '../components/PericiasDrawer.jsx'
+import SideDrawer from '../components/SideDrawer.jsx'
+import InventoryGrid from '../components/InventoryGrid.jsx'
+import RichTextEditor from '../components/RichTextEditor.jsx'
+import { usePlayer } from '../lib/PlayerContext.jsx'
+import { normalizeSheet } from '../lib/characterMigration.js'
+
+export default function CharacterSheet() {
+  const { id } = useParams()
+  const { identity } = usePlayer()
+  const [character, setCharacter] = useState(null)
+  const [sheet, setSheet] = useState(null)
+  const [nameDraft, setNameDraft] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+  const [dirty, setDirty] = useState(false)
+
+  useEffect(() => {
+    let cancelled = false
+    async function load() {
+      setLoading(true)
+      const { data, error } = await supabase.from('characters').select('*').eq('id', id).single()
+      if (cancelled) return
+      if (error) {
+        setError(
+          error.code === 'PGRST116'
+            ? 'Você não tem acesso a esta ficha. Abra pela campanha e digite o código do site do dono.'
+            : error.message
+        )
+      } else {
+        setCharacter(data)
+        setSheet(normalizeSheet(data.sheet || {}))
+        setNameDraft(data.name || '')
+      }
+      setLoading(false)
+    }
+    load()
+    return () => {
+      cancelled = true
+    }
+  }, [id])
+
+  function updateSheet(next) {
+    setSheet(next)
+    setDirty(true)
+  }
+
+  function updateName(v) {
+    setNameDraft(v)
+    setDirty(true)
+  }
+
+  async function handleSave() {
+    setSaving(true)
+    const { error } = await supabase.rpc('save_character_sheet', {
+      p_character_id: id,
+      p_name: nameDraft,
+      p_sheet: sheet,
+    })
+    setSaving(false)
+    if (error) setError(error.message)
+    else {
+      setCharacter((c) => ({ ...c, name: nameDraft.trim() || c.name }))
+      setDirty(false)
+    }
+  }
+
+  if (loading) return <div className="card muted">Consultando os pergaminhos...</div>
+  if (error)
+    return (
+      <div className="card">
+        <p>{error}</p>
+        <Link className="btn" to="/campanhas">
+          Voltar às campanhas
+        </Link>
+      </div>
+    )
+  if (!character || !sheet) return null
+
+  return (
+    <div className="sheet-shell">
+      {character.player_id !== identity?.playerId && (
+        <p className="muted" style={{ textAlign: 'center' }}>
+          Você está editando a ficha de outro jogador.
+        </p>
+      )}
+      <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 12 }}>
+        <button className="primary" onClick={handleSave} disabled={!dirty || saving}>
+          {saving ? 'Salvando...' : dirty ? 'Salvar alterações' : 'Tudo salvo'}
+        </button>
+      </div>
+
+      <div className="sheet-columns">
+        <div className="sheet-col sheet-col-left">
+          <span className="eyebrow">Habilidades</span>
+          <CompactItemList
+            createPlaceholder="Nome da habilidade"
+            emptyLabel="Nenhuma habilidade ainda."
+            items={sheet.habilidades || []}
+            onChange={(items) => updateSheet({ ...sheet, habilidades: items })}
+          />
+        </div>
+
+        <div className="sheet-col sheet-col-center">
+          <div className="header-name-row">
+            <LevelDial nivel={sheet.nivelAtual ?? 1} onChange={(n) => updateSheet({ ...sheet, nivelAtual: Math.max(0, n) })} />
+            <TextLine label="Nome" value={nameDraft} onChange={updateName} big />
+          </div>
+
+          <AssimilationStars
+            value={sheet.assimilacao ?? 0}
+            onChange={(val) => updateSheet({ ...sheet, assimilacao: val })}
+          />
+
+          <HexAttributes atributos={sheet.atributos} onChange={(a) => updateSheet({ ...sheet, atributos: a })} />
+
+          <ActionPoints pontosAcao={sheet.pontosAcao} onChange={(pa) => updateSheet({ ...sheet, pontosAcao: pa })} />
+
+          <div className="resources-row">
+            <ResourceRing label="PV" resource={sheet.resources.pv} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pv: r } })} />
+            <ResourceRing label="PD" resource={sheet.resources.pd} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pd: r } })} />
+            <ResourceRing label="PM" resource={sheet.resources.pm} onChange={(r) => updateSheet({ ...sheet, resources: { ...sheet.resources, pm: r } })} />
+          </div>
+
+          <TextLine label="Aparar" value={sheet.combatStats?.aparar} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, aparar: v } })} />
+          <TextLine label="Bloquear" value={sheet.combatStats?.bloquear} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, bloquear: v } })} />
+          <TextLine label="Esquivar" value={sheet.combatStats?.esquivar} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, esquivar: v } })} />
+          <TextLine label="Resistências" value={sheet.combatStats?.resistencias} onChange={(v) => updateSheet({ ...sheet, combatStats: { ...sheet.combatStats, resistencias: v } })} />
+
+          <div className="sheet-dice" style={{ marginTop: 30 }}>
+            <DiceRoller />
+          </div>
+
+        </div>
+
+        <div className="sheet-col sheet-col-right">
+          <TextLine label="Bônus Arcano" value={sheet.bonusArcano} onChange={(v) => updateSheet({ ...sheet, bonusArcano: v })} />
+          <TextLine label="DT Arcana" value={sheet.dtArcana} onChange={(v) => updateSheet({ ...sheet, dtArcana: v })} />
+          <span className="eyebrow">Magias</span>
+          <CompactItemList
+            createPlaceholder="Nome da magia"
+            emptyLabel="Nenhuma magia ainda."
+            items={sheet.magiasUnificadas || []}
+            onChange={(items) => updateSheet({ ...sheet, magiasUnificadas: items })}
+          />
+        </div>
+      </div>
+
+      <PericiasDrawer pericias={sheet.pericias} onChange={(p) => updateSheet({ ...sheet, pericias: p })} />
+
+      <SideDrawer side="right" label="Anotações">
+        <h2>Anotações</h2>
+        <RichTextEditor
+          initialValue={sheet.anotacoes}
+          onChange={(html) => updateSheet({ ...sheet, anotacoes: html })}
+          placeholder="Anote o que quiser sobre a jornada do seu campeão..."
+          rows={20}
+        />
+      </SideDrawer>
+
+      <SideDrawer side="left" label="Inventário">
+        <InventoryGrid items={sheet.inventario || []} onChange={(items) => updateSheet({ ...sheet, inventario: items })} />
+      </SideDrawer>
+    </div>
+  )
+}
